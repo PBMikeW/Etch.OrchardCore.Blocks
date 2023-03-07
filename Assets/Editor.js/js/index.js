@@ -39,15 +39,23 @@ window.initializeEditorJS = (
 
         placeholder: placeholder || 'Click here to start entering content blocks..',
 
-      tools: {
-            Color: {
-              class: textColor,
-              config: {
-                colorCollections: ['#F8F8F8', '#D1D1D1', '#72808A', '#FFCD00', '#EF4123', '#002D6A', '#FFF', '#000', '#99ABC3'],
-                defaultColor: '#002D6A',
-                type: 'text',
-              }
+        tools: {
+            table: {
+                class: Table,
+                inlineToolbar: true,
+                config: {
+                  rows: 2,
+                  cols: 3,
+                },
             },
+        Color: {
+          class: textColor,
+            config: {
+              colorCollections: ['#F8F8F8', '#D1D1D1', '#72808A', '#FFCD00', '#EF4123', '#002D6A', '#FFF', '#000', '#99ABC3'],
+              defaultColor: '#002D6A',
+              type: 'text',
+            }
+        },
           delimiter: Delimiter,
         fontSize0point8: {
           class: textSize,
@@ -91,48 +99,48 @@ window.initializeEditorJS = (
             buttonText: "1.3"
           }
         },
-            embed: {
-                class: Embed,
-                config: {
-                    services: {
-                        youtube: true,
-                    },
-                },
-                inlineToolbar: true,
-            },
-            header: {
-                class: Header,
-                inlineToolbar: true,
-            },
-            image: {
-                class: MediaLibrary,
-                config: {
-                    id,
+        embed: {
+            class: Embed,
+            config: {
+                services: {
+                    youtube: true,
                 },
             },
-            link: {
-                class: LinkTool,
-                config: {
-                    fieldName,
-                    partName,
-                    typeName,
-                    tenantPath,
-                },
-            },
-            list: {
-                class: List,
-                inlineToolbar: true,
-            },
-            paragraph: {
-                class: Paragraph,
-                inlineToolbar: true,
-                config: {
-                    preserveBlank: true,
-                },
-            },
-            quote: Quote,
-            raw: Raw,
+            inlineToolbar: true,
         },
+        header: {
+            class: Header,
+            inlineToolbar: true,
+        },
+        image: {
+            class: MediaLibrary,
+            config: {
+                id,
+            },
+        },
+        link: {
+            class: LinkTool,
+            config: {
+                fieldName,
+                partName,
+                typeName,
+                tenantPath,
+            },
+        },
+        list: {
+            class: List,
+            inlineToolbar: true,
+        },
+        paragraph: {
+            class: Paragraph,
+            inlineToolbar: true,
+            config: {
+                preserveBlank: true,
+            },
+        },
+        quote: Quote,
+        raw: Raw,
+      },
 
         data: !$hiddenField.value ? {} : JSON.parse($hiddenField.value),
 
