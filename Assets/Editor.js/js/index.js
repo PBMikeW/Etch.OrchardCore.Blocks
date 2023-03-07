@@ -5,10 +5,12 @@ import List from '@editorjs/list';
 import Paragraph from '@editorjs/paragraph';
 import Raw from '@editorjs/raw';
 import Quote from '@editorjs/quote';
-
+import Table from '@editorjs/table';
 import EditorJS from '@editorjs/editorjs';
 
 import LinkTool from './plugins/link';
+import textColor from './plugins/text-color';
+import textSize from './plugins/text-size';
 import MediaLibrary from './plugins/mediaLibrary';
 
 window.initializeEditorJS = (
@@ -35,17 +37,64 @@ window.initializeEditorJS = (
     const editor = new EditorJS({
         holder: id,
 
-        placeholder: placeholder || 'Enter your content here...',
+        placeholder: placeholder || 'Click here to start entering content blocks..',
 
-        tools: {
-            delimiter: Delimiter,
+      tools: {
+            Color: {
+              class: textColor,
+              config: {
+                colorCollections: ['#F8F8F8', '#D1D1D1', '#72808A', '#FFCD00', '#EF4123', '#002D6A', '#FFF', '#000', '#99ABC3'],
+                defaultColor: '#002D6A',
+                type: 'text',
+              }
+            },
+          delimiter: Delimiter,
+        fontSize0point8: {
+          class: textSize,
+          config: {
+            cssClass: "editor-fs-0point8",
+            buttonText: ".8"
+          }
+        },
+        fontSize0point9: {
+          class: textSize,
+          config: {
+            cssClass: "editor-fs-0point9",
+            buttonText: ".9"
+          }
+        },
+        fontSize1point0: {
+          class: textSize,
+          config: {
+            cssClass: "editor-fs-1point0",
+            buttonText: "1.0"
+          }
+        },
+        fontSize1point1: {
+          class: textSize,
+          config: {
+            cssClass: "editor-fs-1point1",
+            buttonText: "1.1"
+          }
+        },
+        fontSize1point2: {
+          class: textSize,
+          config: {
+            cssClass: "editor-fs-1point2",
+            buttonText: "1.2"
+          }
+        },
+        fontSize1point3: {
+          class: textSize,
+          config: {
+            cssClass: "editor-fs-1point3",
+            buttonText: "1.3"
+          }
+        },
             embed: {
                 class: Embed,
                 config: {
                     services: {
-                        'twitch-channel': true,
-                        'twitch-video': true,
-                        vimeo: true,
                         youtube: true,
                     },
                 },
@@ -111,3 +160,4 @@ window.initializeEditorJS = (
 
     $form.addEventListener('submit', onSubmit);
 };
+//# sourceMappingURL=/scripts/editorjs/admin.js.map

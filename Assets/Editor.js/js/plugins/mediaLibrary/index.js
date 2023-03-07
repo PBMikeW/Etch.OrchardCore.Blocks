@@ -1,4 +1,4 @@
-import bootstrap from 'bootstrap';
+import 'bootstrap';
 import $ from 'jquery';
 
 import Ui from './ui';
@@ -94,6 +94,11 @@ export default class MediaLibraryTool {
             button.classList.add('cdx-settings-button');
             button.innerHTML = tune.icon;
 
+            this.api.tooltip.onHover(button, tune.name, {
+                placement: 'top',
+                hidingDelay: 500,
+            });
+
             if (this.data[tune.name]) {
                 button.classList.add(this.api.styles.settingsButtonActive);
             } else {
@@ -129,8 +134,7 @@ export default class MediaLibraryTool {
 
         $(selectors.mediaApp).show();
 
-        const modal = new bootstrap.Modal($(this.modalBodyElement)[0]);     
-        modal.show();
+        const modal = $(this.modalBodyElement).modal();
 
         $(this.modalBodyElement)
             .find(selectors.mediaFieldSelectButton)
@@ -142,7 +146,7 @@ export default class MediaLibraryTool {
 
                 window.mediaApp.selectedMedias = [];
 
-                modal.hide();
+                modal.modal('hide');
                 return true;
             });
     }

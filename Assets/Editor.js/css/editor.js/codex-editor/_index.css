@@ -1,19 +1,20 @@
-/**
+﻿/**
  * Overrides styles applied to editor.js
  */
-
 /**
  * 1. Reduce the spacing beneath the editor, 300px is too
  * excessive. Have to use !important because editor.js sets 
  * padding-bottom as an inline style.
  */
 .codex-editor .codex-editor__redactor {
-    padding-bottom: 20px!important; /* 1. */
+  padding-bottom: 100px !important;
+  /* 1. */
 }
+
 .ce-block__content, .ce-toolbar__content {
-    max-width: calc(100% - 80px) !important;
+  max-width: calc(100% - 80px) !important;
 }
 
 .cdx-block {
-    max-width: 100% !important;
+  max-width: 100% !important;
 }
