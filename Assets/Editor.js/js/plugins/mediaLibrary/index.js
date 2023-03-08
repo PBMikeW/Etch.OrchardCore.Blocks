@@ -3,6 +3,7 @@ import $ from 'jquery';
 
 import Ui from './ui';
 import './index.css';
+import { IconStretch, IconPicture } from '@codexteam/icons';
 
 const selectors = {
   mediaApp: '#mediaApp',
@@ -34,8 +35,10 @@ export default class MediaLibraryTool {
 
     this.data = {
       url: data.url || '',
+      baseUrl: data.baseUrl || data.url,
       caption: data.caption || '',
       stretched: data.stretched !== undefined ? data.stretched : false,
+      profile: data.profile !== undefined ? data.profile.name : this.profiles[3].name
     };
 
     this.modalBodyElement = document.getElementById(
@@ -82,38 +85,31 @@ export default class MediaLibraryTool {
     const settings = [
       {
         name: 'stretched',
-        icon: `<svg width="17" height="10" viewBox="0 0 17 10" xmlns="http://www.w3.org/2000/svg"><path d="M13.568 5.925H4.056l1.703 1.703a1.125 1.125 0 0 1-1.59 1.591L.962 6.014A1.069 1.069 0 0 1 .588 4.26L4.38.469a1.069 1.069 0 0 1 1.512 1.511L4.084 3.787h9.606l-1.85-1.85a1.069 1.069 0 1 1 1.512-1.51l3.792 3.791a1.069 1.069 0 0 1-.475 1.788L13.514 9.16a1.125 1.125 0 0 1-1.59-1.591l1.644-1.644z"/></svg>`,
+        icon: IconStretch,
+        text: 'Stretch image',
       },
     ];
+    let profiles = this.profiles.map(profile => ({
+      icon: profile.icon,
+      label: this.api.i18n.t(`Profile: ${profile.name.charAt(0).toUpperCase() + profile.name.slice(1)}`),
+      onActivate: () => this.setProfile(profile),
+      closeOnActivate: true,
+      isActive: this.currentProfile.name === profile.name,
+    }));
 
-    const wrapper = document.createElement('div');
+    let settingsActions = settings.map(setting => ({
+      icon: setting.icon,
+      label: setting.text,
+      onActivate: () => this._toggleTune(setting.name),
+      closeOnActivate: true,
+      isActive: this.data[setting.name] === true,
+    }));
 
-    settings.forEach(tune => {
-      let button = document.createElement('div');
-
-      button.classList.add('cdx-settings-button');
-      button.innerHTML = tune.icon;
-
-      if (this.data[tune.name]) {
-        button.classList.add(this.api.styles.settingsButtonActive);
-      } else {
-        button.classList.remove(this.api.styles.settingsButtonActive);
-      }
-
-      wrapper.appendChild(button);
-
-      button.addEventListener('click', () => {
-        this._toggleTune(tune.name);
-        button.classList.toggle(this.api.styles.settingsButtonActive);
-      });
-    });
-
-    return wrapper;
+    return [...profiles, ...settingsActions];
   }
 
   save() {
     this.data.caption = this.ui.getCaption();
-
     return this.data;
   }
 
@@ -154,7 +150,9 @@ export default class MediaLibraryTool {
     this.data = {
       caption: '',
       mediaPath: media.mediaPath,
-      url: media.url,
+      url: media.url + data.profile !== undefined ? '?width=' + data.profile.previewSize : '',
+      baseUrl: media.url,
+      profile: this.data.profile
     };
 
     this.ui.render(this.data);
@@ -170,5 +168,58 @@ export default class MediaLibraryTool {
         this.api.blocks.stretchBlock(blockId, this.data[tune]);
       }, 0);
     }
+  }
+
+  get currentProfile() {
+    let profile = this.profiles.find(levelItem => levelItem.name === this.data.profile);
+
+    if (!profile) {
+      profile = this.profiles[2];
+    }
+
+    return profile;
+  }
+
+  setProfile(profile) {
+    let url = this.data.baseUrl !== undefined ? this.data.baseUrl + '?width=' + profile.previewSize : this.data.url + '?width=' + profile.previewSize;
+    this.data = {
+      caption: this.data.caption,
+      mediaPath: this.data.mediaPath,
+      baseUrl: this.data.baseUrl,
+      url: url,
+      profile: profile.name
+    };
+    this.ui.render(this.data);
+  }
+
+  get profiles() {
+    const availableProfiles = [
+      {
+        name: 'tiny',
+        icon: IconPicture,
+        previewSize: 50
+      },
+      {
+        name: 'small',
+        icon: IconPicture,
+        previewSize: 160
+      },
+      {
+        name: 'medium',
+        icon: IconPicture,
+        previewSize: 240
+      },
+      {
+        name: 'large',
+        icon: IconPicture,
+        previewSize: 480
+      },
+      {
+        name: 'huge',
+        icon: IconPicture,
+        previewSize: 1024
+      },
+    ];
+    return availableProfiles;
   }
 }

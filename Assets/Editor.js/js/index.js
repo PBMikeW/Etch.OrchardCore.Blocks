@@ -56,7 +56,7 @@ window.initializeEditorJS = (
               type: 'text',
             }
         },
-          delimiter: Delimiter,
+        delimiter: Delimiter,
         fontSize0point8: {
           class: textSize,
           config: {

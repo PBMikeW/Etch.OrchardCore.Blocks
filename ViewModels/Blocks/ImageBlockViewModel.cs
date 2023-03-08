@@ -5,6 +5,7 @@
         public string Caption { get; set; }
         public string MediaPath { get; set; }
         public bool Stretched { get; set; }
+        public string Profile { get; set; }
         public string Url { get; set; }
 
         public bool HasCaption

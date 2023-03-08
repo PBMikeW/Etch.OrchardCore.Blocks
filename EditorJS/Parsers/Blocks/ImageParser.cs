@@ -13,6 +13,7 @@ namespace Etch.OrchardCore.Blocks.EditorJS.Parsers.Blocks
                 {
                     Caption = block.Get("caption"),
                     Stretched = block.Get("stretched", false),
+                    Profile = block.Get("profile"),
                     Url = GetMediaUrl(context, block)
                 }
             );

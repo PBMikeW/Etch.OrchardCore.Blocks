@@ -22,7 +22,6 @@
     <EmbeddedResource Remove="azure-pipelines.yml" />
     <EmbeddedResource Remove="nuget.config" />
     <EmbeddedResource Remove="LICENSE.md" />
-    <EmbeddedResource Remove="package.json" />
     <EmbeddedResource Remove="package-lock.json" />
     <EmbeddedResource Remove="README.md" />
     <EmbeddedResource Remove="webpack.config.js" />
