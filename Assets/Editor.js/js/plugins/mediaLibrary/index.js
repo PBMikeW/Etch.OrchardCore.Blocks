@@ -38,7 +38,7 @@ export default class MediaLibraryTool {
       baseUrl: data.baseUrl || data.url,
       caption: data.caption || '',
       stretched: data.stretched !== undefined ? data.stretched : false,
-      profile: data.profile !== undefined ? data.profile.name : this.profiles[3].name
+      profile: data.profile !== undefined ? data.profile : this.profiles[3]
     };
 
     this.modalBodyElement = document.getElementById(
@@ -147,10 +147,11 @@ export default class MediaLibraryTool {
    * Updates block with selected media item.
    */
   _setMedia(media) {
+    let url = media.url + '?width=' + this.data.profile.previewSize;
     this.data = {
       caption: '',
       mediaPath: media.mediaPath,
-      url: media.url + data.profile !== undefined ? '?width=' + data.profile.previewSize : '',
+      url:url,   
       baseUrl: media.url,
       profile: this.data.profile
     };
