@@ -22,6 +22,10 @@ class ColorPlugin extends HTMLElement {
             width:15px;
             font-size:14px;
             border: none;
+            position: relative;
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
         }
         :host([block]){
             display:block;
@@ -112,12 +116,13 @@ class ColorPlugin extends HTMLElement {
             display: flex;
             align-items: center;
             justify-content: center;
+            height: 100%;
         }
         .color-fire-btn {
             font-size: 17px;
             font-weight: bold;
             height: 28px;
-            padding-top: 8px;
+            padding-top: 1px;
             padding-right: 1px;
             margin-left: 3px;
             text-shadow: 2px 0 0 #cab9b9;
