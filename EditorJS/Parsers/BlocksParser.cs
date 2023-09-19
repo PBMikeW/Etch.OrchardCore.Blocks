@@ -25,6 +25,7 @@ namespace Etch.OrchardCore.Blocks.EditorJS.Parsers
             { "delimiter", new DelimiterBlockParser() },
             { "embed", new EmbedBlockParser() },
             { "header", new HeadingBlockParser() },
+            { "table", new TableBlockParser() },
             { "image", new ImageParser() },
             { "list", new ListBlockParser() },
             { "paragraph", new ParagraphBlockParser() },
