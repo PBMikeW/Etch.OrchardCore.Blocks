@@ -12,6 +12,7 @@ import LinkTool from './plugins/link';
 import textColor from './plugins/text-color';
 import textSize from './plugins/text-size';
 import MediaLibrary from './plugins/mediaLibrary';
+import Button from './plugins/button';
 
 window.initializeEditorJS = (
     tenantPath,
@@ -38,7 +39,6 @@ window.initializeEditorJS = (
         holder: id,
 
         placeholder: placeholder || 'Click here to start entering content blocks..',
-
         tools: {
             table: {
                 class: Table,
@@ -47,6 +47,16 @@ window.initializeEditorJS = (
                   rows: 2,
                   cols: 3,
                 },
+            },
+            button: {
+                class: Button,
+                config: {
+                    color: {
+                        "Blue" : "stdbluebutton",
+                        "Red" : "stdredbutton",
+                        "White" : "stdwhitebutton"
+                    }
+                }
             },
         Color: {
           class: textColor,

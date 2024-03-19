@@ -30,7 +30,8 @@ namespace Etch.OrchardCore.Blocks.EditorJS.Parsers
             { "list", new ListBlockParser() },
             { "paragraph", new ParagraphBlockParser() },
             { "quote", new QuoteBlockParser() },
-            { "raw", new RawBlockParser() }
+            { "raw", new RawBlockParser() },
+            { "button", new ButtonBlockParser()}
         };
 
         #endregion
