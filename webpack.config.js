@@ -1,59 +1,42 @@
-const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const path = require('path');
 
-module.exports = {
-    entry: {
-        editorjs: './Assets/Editor.js/js/index',
-        styles: path.join(process.cwd(), 'Assets/Editor.js/css/index.scss'),
+const moduleRules = {
+  rules: [
+    {
+      test: /\.js$/,
+      exclude: /node_modules/,
+      use: {
+        loader: 'babel-loader',
+      },
     },
+    {
+      test: /\.s?css$/,
+      use: ['style-loader', 'css-loader', 'sass-loader']
+    },
+  ]
+};
+
+module.exports = [
+  {
     mode: 'development',
-    module: {
-        rules: [
-            {
-                test: /\.js$/,
-                exclude: /node_modules/,
-                use: {
-                    loader: 'babel-loader',
-                },
-            },
-            {
-                test: /\.css$/,
-                use: ['style-loader', 'css-loader'],
-            },
-            {
-                test: /\.scss$/,
-                use: [
-                    MiniCssExtractPlugin.loader,
-                    {
-                        loader: 'css-loader',
-                        options: {
-                            url: false,
-                        },
-                    },
-                    {
-                        loader: 'postcss-loader',
-                        options: {
-                            postcssOptions: {
-                                plugins: [['autoprefixer']],
-                            },
-                        },
-                    },
-                    'sass-loader',
-                ],
-            },
-        ],
-    },
-    externals: {
-        bootstrap: 'bootstrap',
-        jquery: 'jQuery',
+    entry: {
+      editorjs: './Assets/Editor.js/js/index',
+      styles: './Assets/Editor.js/css/index.scss',
     },
     output: {
-        filename: '[name]/admin.js',
-        path: path.resolve(__dirname, './wwwroot/Scripts/'),
+      path: path.resolve(__dirname, './wwwroot/Scripts/'),
+      filename: '[name]/admin.js',
     },
-    plugins: [
-        new MiniCssExtractPlugin({
-            filename: '../Styles/editorjs/admin.css',
-        }),
-    ],
-};
+    module: moduleRules,
+    resolve: {
+      extensions: [".js", ".jsx"]
+    },
+    externals: {
+      bootstrap: 'bootstrap',
+      jquery: 'jQuery',
+    },
+    performance: {
+      hints: "warning"
+    }
+  }
+];
