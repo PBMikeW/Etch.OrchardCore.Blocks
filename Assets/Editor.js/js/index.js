@@ -164,8 +164,7 @@ window.initializeEditorJS = (
       quote: Quote,
       raw: Raw,
     },
-    tunes: ['anchorTune'],
-    tunes: ['anyTune'],
+    tunes: ['anchorTune', 'anyTune'],
     data: !$hiddenField.value ? {} : JSON.parse($hiddenField.value),
 
     onChange: () => {
