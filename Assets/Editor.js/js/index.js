@@ -51,17 +51,6 @@ window.initializeEditorJS = (
           cols: 3,
         },
       },
-      anchorTune: AnchorTune,
-      anyTune: {
-        class: AlignmentTuneTool,
-        config: {
-          default: "left",
-          blocks: {
-            header: 'center',
-            list: 'left'
-          }
-        },
-      },
       Color: {
         class: ColorPlugin,
         config: {
@@ -164,7 +153,6 @@ window.initializeEditorJS = (
       quote: Quote,
       raw: Raw,
     },
-    tunes: ['anchorTune', 'anyTune'],
     data: !$hiddenField.value ? {} : JSON.parse($hiddenField.value),
 
     onChange: () => {
