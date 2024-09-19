@@ -42,7 +42,7 @@ namespace Etch.OrchardCore.Blocks.Controllers
             {
                 return new ObjectResult(await _contentSearchResultsProvider.SearchAsync(new ContentSearchContext
                 {
-                    ContentTypes = GetLinkableTypes(type, part, field),
+                    ContentTypes = await GetLinkableTypes(type, part, field),
                     Query = query
                 }));
             } 
@@ -56,19 +56,19 @@ namespace Etch.OrchardCore.Blocks.Controllers
 
         #region Private Methods
 
-        private string[] GetLinkableTypes(string type, string part, string field)
+        private async Task <string[]> GetLinkableTypes(string type, string part, string field)
         {
             if (!string.IsNullOrEmpty(field))
             {
-                return GetLinkableTypesFromFieldDefinition(part, field);
+                return await GetLinkableTypesFromFieldDefinition(part, field);
             }
 
-            return GetLinkableTypesFromPartDefinition(type, part);
+            return await GetLinkableTypesFromPartDefinition(type, part);
         }
 
-        private string[] GetLinkableTypesFromPartDefinition(string type, string part)
+        private async Task<string[]> GetLinkableTypesFromPartDefinition(string type, string part)
         {
-            var typeDefinition = _contentDefinitionManager.GetTypeDefinition(type);
+            var typeDefinition = await _contentDefinitionManager.GetTypeDefinitionAsync(type);
 
             var contentTypePartDefinition = typeDefinition.Parts.FirstOrDefault(p => p.Name == part);
 
@@ -80,9 +80,9 @@ namespace Etch.OrchardCore.Blocks.Controllers
             return contentTypePartDefinition.GetSettings<BlockBodyPartSettings>()?.LinkableContentTypes ?? Array.Empty<string>();
         }
 
-        private string[] GetLinkableTypesFromFieldDefinition(string part, string field)
+        private async Task<string[]> GetLinkableTypesFromFieldDefinition(string part, string field)
         {
-            var partFieldDefinition = _contentDefinitionManager.GetPartDefinition(part)?.Fields
+            var partFieldDefinition = (await _contentDefinitionManager.GetPartDefinitionAsync(part))?.Fields
                .FirstOrDefault(f => f.Name == field);
 
             var fieldSettings = partFieldDefinition?.GetSettings<BlockFieldSettings>();
