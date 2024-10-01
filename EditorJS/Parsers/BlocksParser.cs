@@ -5,7 +5,8 @@ using Etch.OrchardCore.Blocks.Models;
 using Etch.OrchardCore.Blocks.Parsers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using OrchardCore.ContentManagement;
 using OrchardCore.DisplayManagement;
 using OrchardCore.Liquid;
@@ -103,8 +104,11 @@ namespace Etch.OrchardCore.Blocks.EditorJS.Parsers
         public async Task<IList<dynamic>> RenderAsync(BlockParserContext context, string data)
         {
             var shapes = new List<dynamic>();
-
-            foreach (var block in JsonConvert.DeserializeObject<EditorBlocks>(data).Blocks)
+            if(data == null)
+            {
+                return shapes;
+            }
+            foreach (var block in JConvert.DeserializeObject<EditorBlocks>(data).Blocks)
             {
                 if (!_parsers.ContainsKey(block.Type))
                 {

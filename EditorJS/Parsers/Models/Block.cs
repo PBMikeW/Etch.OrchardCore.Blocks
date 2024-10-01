@@ -1,14 +1,15 @@
-﻿using Newtonsoft.Json;
+﻿using System.Text.Json.Nodes;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace Etch.OrchardCore.Blocks.EditorJS.Parsers.Models
 {
     public class Block
     {
-        [JsonProperty("type")]
+        [JsonPropertyName("type")]
         public string Type { get; set; }
 
-        [JsonProperty("data")]
+        [JsonPropertyName("data")]
         public IDictionary<string, object> Data { get; set; }
 
         public T Get<T>(string property, T defaultValue)
