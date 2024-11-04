@@ -38,7 +38,8 @@ export default class MediaLibraryTool {
       baseUrl: data.baseUrl || data.url,
       caption: data.caption || '',
       stretched: data.stretched !== undefined ? data.stretched : false,
-      profile: data.profile !== undefined ? data.profile : this.profiles[3]
+      profileObject: data.profile !== undefined ? data.profile : this.profiles[3],
+      profile: data.profile !== undefined ? data.profile.name : this.profiles[3].name,
     };
 
     this.modalBodyElement = document.getElementById(
@@ -147,13 +148,20 @@ export default class MediaLibraryTool {
    * Updates block with selected media item.
    */
   _setMedia(media) {
-    let url = media.url + '?width=' + this.data.profile.previewSize;
+    let url = media.url;
+    // Strip any existing query parameters
+    let baseUrl = url.split('?')[0];
+
+    // Add new width parameter
+    url = baseUrl + '?width=' + this.data.profileObject.previewSize;
+
     this.data = {
       caption: '',
       mediaPath: media.mediaPath,
       url:url,   
       baseUrl: media.url,
-      profile: this.data.profile
+      profileObject: this.data.profile,
+      profile: this.data.profile.name
     };
 
     this.ui.render(this.data);
@@ -172,7 +180,7 @@ export default class MediaLibraryTool {
   }
 
   get currentProfile() {
-    let profile = this.profiles.find(levelItem => levelItem.name === this.data.profile);
+    let profile = this.profiles.find(levelItem => levelItem.name === this.data.profileObject.name);
 
     if (!profile) {
       profile = this.profiles[2];
@@ -181,14 +189,21 @@ export default class MediaLibraryTool {
     return profile;
   }
 
-  setProfile(profile) {
-    let url = this.data.baseUrl !== undefined ? this.data.baseUrl + '?width=' + profile.previewSize : this.data.url + '?width=' + profile.previewSize;
+  setProfile(profileObject) {
+    // Strip any existing query parameters
+    let currentUrl = this.data.baseUrl !== undefined ? this.data.baseUrl : this.data.url;
+    let baseUrl = currentUrl.split('?')[0];
+
+    let url = baseUrl + '?width=' + profileObject.previewSize;
+
     this.data = {
+      ...this.data,
       caption: this.data.caption,
       mediaPath: this.data.mediaPath,
       baseUrl: this.data.baseUrl,
       url: url,
-      profile: profile.name
+      profile: profileObject.Name,
+      profileObject: profileObject
     };
     this.ui.render(this.data);
   }
@@ -199,6 +214,11 @@ export default class MediaLibraryTool {
         name: 'tiny',
         icon: IconPicture,
         previewSize: 50
+      },
+      {
+        name: 'extrasmall',
+        icon: IconPicture,
+        previewSize: 100
       },
       {
         name: 'small',
