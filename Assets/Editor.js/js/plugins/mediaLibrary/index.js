@@ -38,8 +38,8 @@ export default class MediaLibraryTool {
       baseUrl: data.baseUrl || data.url,
       caption: data.caption || '',
       stretched: data.stretched !== undefined ? data.stretched : false,
-      profileObject: data.profile !== undefined ? data.profile : this.profiles[3],
-      profile: data.profile !== undefined ? data.profile.name : this.profiles[3].name,
+      profileObject: data.profileObject !== undefined ? data.profileObject : this.profiles[3],
+      profile: data.profile !== undefined ? data.profile : this.profiles[3].name,
     };
 
     this.modalBodyElement = document.getElementById(
@@ -92,7 +92,7 @@ export default class MediaLibraryTool {
     ];
     let profiles = this.profiles.map(profile => ({
       icon: profile.icon,
-      label: this.api.i18n.t(`Profile: ${profile.name.charAt(0).toUpperCase() + profile.name.slice(1)}`),
+      label: this.api.i18n.t(`Profile: ${profile.name}`),
       onActivate: () => this.setProfile(profile),
       closeOnActivate: true,
       isActive: this.currentProfile.name === profile.name,
@@ -160,8 +160,8 @@ export default class MediaLibraryTool {
       mediaPath: media.mediaPath,
       url:url,   
       baseUrl: media.url,
-      profileObject: this.data.profile,
-      profile: this.data.profile.name
+      profileObject: this.data.profileObject,
+      profile: this.data.profileObject.name
     };
 
     this.ui.render(this.data);
@@ -180,7 +180,7 @@ export default class MediaLibraryTool {
   }
 
   get currentProfile() {
-    let profile = this.profiles.find(levelItem => levelItem.name === this.data.profileObject.name);
+    let profile = this.profiles.find(levelItem => levelItem.name === this.data.profile);
 
     if (!profile) {
       profile = this.profiles[2];
@@ -202,7 +202,7 @@ export default class MediaLibraryTool {
       mediaPath: this.data.mediaPath,
       baseUrl: this.data.baseUrl,
       url: url,
-      profile: profileObject.Name,
+      profile: profileObject.name,
       profileObject: profileObject
     };
     this.ui.render(this.data);
@@ -211,35 +211,40 @@ export default class MediaLibraryTool {
   get profiles() {
     const availableProfiles = [
       {
-        name: 'tiny',
+        name: '50x50',
         icon: IconPicture,
         previewSize: 50
       },
       {
-        name: 'extrasmall',
+        name: '75x75',
+        icon: IconPicture,
+        previewSize: 75
+      },
+      {
+        name: '100x100',
         icon: IconPicture,
         previewSize: 100
       },
       {
-        name: 'small',
+        name: '160x160',
         icon: IconPicture,
         previewSize: 160
       },
       {
-        name: 'medium',
+        name: '240x240',
         icon: IconPicture,
         previewSize: 240
       },
       {
-        name: 'large',
+        name: '480x480',
         icon: IconPicture,
         previewSize: 480
       },
       {
-        name: 'huge',
+        name: '1024x1024',
         icon: IconPicture,
         previewSize: 1024
-      },
+      }
     ];
     return availableProfiles;
   }
