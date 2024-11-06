@@ -1,16 +1,38 @@
-﻿@{ 
+﻿@{
     TagBuilder tag = Tag(Model, Model.Style == "unordered" ? "ul" : "ol");
 }
-
 @tag.RenderStartTag()
 @{
-    if(Model.ListItems != null)
+    if (Model.ListItems != null)
     {
         foreach (var item in Model.ListItems)
         {
-            <li>@Html.Raw(item)</li>
+            // Extract color from first font tag if exists
+            string color = null;
+            var itemStr = item.ToString();
+            if (itemStr.Contains("<font"))
+            {
+                var styleStart = itemStr.IndexOf("color:");
+                if (styleStart != -1)
+                {
+                    var styleEnd = itemStr.IndexOf(";", styleStart);
+                    if (styleEnd == -1) styleEnd = itemStr.IndexOf("\"", styleStart);
+                    if (styleEnd != -1)
+                    {
+                        color = itemStr.Substring(styleStart + 6, styleEnd - (styleStart + 6)).Trim();
+                    }
+                }
+            }
+
+            @if (color != null)
+            {
+                <li style="color: @color">@Html.Raw(item)</li>
+            }
+            else
+            {
+                <li>@Html.Raw(item)</li>
+            }
         }
     }
 }
-
 @tag.RenderEndTag()

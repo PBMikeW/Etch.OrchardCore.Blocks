@@ -148,12 +148,11 @@ export default class MediaLibraryTool {
    * Updates block with selected media item.
    */
   _setMedia(media) {
-    let url = media.url;
     // Strip any existing query parameters
-    let baseUrl = url.split('?')[0];
+    let baseUrl = media.url.split('?')[0];
 
     // Add new width parameter
-    url = baseUrl + '?width=' + this.data.profileObject.previewSize;
+    let url = baseUrl + '?width=' + this.data.profileObject.width + '&height=' + this.data.profileObject.height;
 
     this.data = {
       caption: '',
@@ -194,7 +193,7 @@ export default class MediaLibraryTool {
     let currentUrl = this.data.baseUrl !== undefined ? this.data.baseUrl : this.data.url;
     let baseUrl = currentUrl.split('?')[0];
 
-    let url = baseUrl + '?width=' + profileObject.previewSize;
+    let url = baseUrl + '?width=' + profileObject.width + '&height=' + profileObject.height;
 
     this.data = {
       ...this.data,
@@ -213,37 +212,68 @@ export default class MediaLibraryTool {
       {
         name: '50x50',
         icon: IconPicture,
-        previewSize: 50
+        width: 50,
+        height: 50
       },
       {
         name: '75x75',
         icon: IconPicture,
-        previewSize: 75
+        width: 75,
+        height: 75
       },
       {
         name: '100x100',
         icon: IconPicture,
-        previewSize: 100
+        width: 100,
+        height: 100
       },
       {
         name: '160x160',
         icon: IconPicture,
-        previewSize: 160
+        width: 160,
+        height: 160
       },
       {
         name: '240x240',
         icon: IconPicture,
-        previewSize: 240
+        width: 240,
+        height: 240
       },
       {
         name: '480x480',
         icon: IconPicture,
-        previewSize: 480
+        width: 480,
+        height: 480
+      },
+      {
+        name: '600x600',
+        icon: IconPicture,
+        width: 600,
+        height: 600
+      },
+      {
+        name: '1024x600',
+        icon: IconPicture,
+        width: 1024,
+        height: 600
       },
       {
         name: '1024x1024',
         icon: IconPicture,
-        previewSize: 1024
+        width: 1024,
+        height: 1024
+      },
+      {
+        name: '2048x1024',
+        icon: IconPicture,
+        width: 2048,
+        height: 1024
+      },
+      {
+        name: '2048x2048',
+        icon: IconPicture,
+        width: 2048,
+        height: 2048
       }
     ];
     return availableProfiles;

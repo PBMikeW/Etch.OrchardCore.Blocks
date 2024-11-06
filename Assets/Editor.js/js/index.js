@@ -9,11 +9,13 @@ import Table from '@editorjs/table';
 import EditorJS from '@editorjs/editorjs';
 import AnchorTune from 'editorjs-anchor';
 import LinkTool from './plugins/link';
-const ColorPlugin = require('editorjs-text-color-plugin');
+import TextColor from 'editorjs-text-color-plugin';
 const AlignmentTuneTool = require('editorjs-text-alignment-blocktune');
 import textSize from './plugins/text-size';
 import MediaLibrary from './plugins/mediaLibrary';
 import Undo from 'editorjs-undo';
+import NestedList from '@editorjs/nested-list';
+
 
 window.initializeEditorJS = (
   tenantPath,
@@ -52,7 +54,7 @@ window.initializeEditorJS = (
         },
       },
       Color: {
-        class: ColorPlugin,
+        class: TextColor,
         config: {
           colorCollections: ['#F8F8F8', '#D1D1D1', '#72808A', '#FFCD00', '#EF4123', '#002D6A', '#FFF', '#000', '#99ABC3'],
           defaultColor: '#002D6A',
@@ -61,7 +63,7 @@ window.initializeEditorJS = (
         }
       },
       Marker: {
-        class: ColorPlugin,
+        class: TextColor,
         config: {
           defaultColor: '#FFBF00',
           type: 'marker',

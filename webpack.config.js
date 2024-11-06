@@ -19,6 +19,7 @@ const moduleRules = {
 module.exports = [
   {
     mode: 'development',
+    devtool: 'eval-source-map',
     entry: {
       editorjs: './Assets/Editor.js/js/index',
       styles: './Assets/Editor.js/css/index.scss',
