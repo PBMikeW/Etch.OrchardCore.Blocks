@@ -37,6 +37,7 @@ export default class MediaLibraryTool {
       url: data.url || '',
       baseUrl: data.baseUrl || data.url,
       caption: data.caption || '',
+      linkUrl: data.linkUrl || '',
       stretched: data.stretched !== undefined ? data.stretched : false,
       profileObject: data.profileObject !== undefined ? data.profileObject : this.profiles[3],
       profile: data.profile !== undefined ? data.profile : this.profiles[3].name,
@@ -111,6 +112,7 @@ export default class MediaLibraryTool {
 
   save() {
     this.data.caption = this.ui.getCaption();
+    this.data.linkUrl = this.ui.getLinkUrl();
     return this.data;
   }
 
@@ -156,6 +158,7 @@ export default class MediaLibraryTool {
 
     this.data = {
       caption: '',
+      linkUrl: '',
       mediaPath: media.mediaPath,
       url:url,   
       baseUrl: media.url,
