@@ -16,6 +16,8 @@ import MediaLibrary from './plugins/mediaLibrary';
 import Undo from 'editorjs-undo';
 import NestedList from '@editorjs/nested-list';
 
+// Store editor instances globally for access from raw JSON tab
+window.editorJSInstances = window.editorJSInstances || {};
 
 window.initializeEditorJS = (
   tenantPath,
@@ -36,6 +38,12 @@ window.initializeEditorJS = (
 
   if (!$form) {
     return;
+  }
+
+  // Destroy existing editor instance if it exists (for reinitialization)
+  if (window.editorJSInstances[id]) {
+    window.editorJSInstances[id].destroy();
+    delete window.editorJSInstances[id];
   }
 
   const editor = new EditorJS({
@@ -180,5 +188,8 @@ window.initializeEditorJS = (
   };
 
   $form.addEventListener('submit', onSubmit);
+
+  // Store the editor instance globally for access from raw JSON tab
+  window.editorJSInstances[id] = editor;
 };
 //# sourceMappingURL=/scripts/editorjs/admin.js.map

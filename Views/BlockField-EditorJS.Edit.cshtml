@@ -13,6 +13,9 @@
     var tenantPath = Context.Request.PathBase.ToString();
 
     var settings = Model.PartFieldDefinition.GetSettings<BlockFieldSettings>();
+
+    var editorId = Html.IdFor(m => m).ToString();
+    var dataId = Html.IdFor(m => m.Data).ToString();
 }
 
 @if (isEditorJSEnabled)
@@ -23,18 +26,146 @@
     <script asp-src="~/Etch.OrchardCore.Blocks/Scripts/editorjs/admin.js" depends-on="bootstrap" asp-append-version="true" at="Foot"></script>
     <style asp-src="~/Etch.OrchardCore.Blocks/Styles/editorjs/admin.css" asp-append-version="true" at="Foot"></style>
 
-    <script at="Foot">
-        initializeMediaApplication(false, '@Url.Action("MediaApplication", "Admin", new { area = "OrchardCore.Media" })');
-        initializeEditorJS('@tenantPath', '@Html.IdFor(m => m)', '@Html.IdFor(m => m.Data)', '', '@partName', '@fieldName', '@settings.Placeholder');
-    </script>
-
     <div class="mb-3">
         <h5>@Model.PartFieldDefinition.DisplayName()</h5>
-        <div id="@Html.IdFor(m => m)" data-placeholder></div>
+
+        <!-- Tabs for Visual and Raw editor -->
+        <ul class="nav nav-tabs" id="@editorId-tabs" role="tablist">
+            <li class="nav-item">
+                <button class="nav-link active" id="@editorId-visual-tab" data-bs-toggle="tab" data-bs-target="#@editorId-visual" type="button" role="tab">@T["Visual Editor"]</button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" id="@editorId-raw-tab" data-bs-toggle="tab" data-bs-target="#@editorId-raw" type="button" role="tab">@T["Raw JSON"]</button>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="@editorId-tabContent">
+            <!-- Visual Editor Tab -->
+            <div class="tab-pane fade show active" id="@editorId-visual" role="tabpanel">
+                <div class="pt-3">
+                    <div id="@editorId" data-placeholder></div>
+                </div>
+            </div>
+
+            <!-- Raw JSON Tab -->
+            <div class="tab-pane fade" id="@editorId-raw" role="tabpanel">
+                <div class="pt-3">
+                    <p class="hint text-muted">@T["Edit raw Editor.js JSON data. AI can generate this content."]</p>
+                    <div id="@editorId-monaco-editor" style="min-height: 400px; border: 1px solid #ced4da; border-radius: 0.25rem;"></div>
+                </div>
+            </div>
+        </div>
+
         @Html.HiddenFor(m => m.Data)
     </div>
 
-    <div class="modal" id="@Html.IdFor(m => m)-ModalBody">
+    <script asp-name="monaco" depends-on="admin" at="Foot"></script>
+    <script at="Foot" depends-on="monaco">
+        initializeMediaApplication(false, '@Url.Action("MediaApplication", "Admin", new { area = "OrchardCore.Media" })');
+        initializeEditorJS('@tenantPath', '@editorId', '@dataId', '', '@partName', '@fieldName', '@settings.Placeholder');
+
+        // Lazy-initialize Monaco editor when raw tab is first shown
+        $(document).ready(function () {
+            var monacoEditor = null;
+            var textArea = document.getElementById('@dataId');
+
+            function initMonaco() {
+                if (monacoEditor) return; // Already initialized
+
+                require(['vs/editor/editor.main'], function () {
+                    var monacoSettings = { automaticLayout: true, language: "json" };
+                    var html = document.getElementsByTagName("html")[0];
+                    const mutationObserver = new MutationObserver(setMonacoTheme);
+                    mutationObserver.observe(html, { attributes: true });
+
+                    function setMonacoTheme() {
+                        var theme = html.dataset.theme;
+                        if (theme === "darkmode") {
+                            monaco.editor.setTheme('vs-dark');
+                        } else {
+                            monaco.editor.setTheme('vs');
+                        }
+                    }
+                    setMonacoTheme();
+
+                    monacoEditor = monaco.editor.create(document.getElementById('@editorId-monaco-editor'), monacoSettings);
+
+                    // Load current value from EditorJS or textarea
+                    loadValueIntoMonaco();
+
+                    // Update textarea on Monaco editor change
+                    monacoEditor.getModel().onDidChangeContent(function () {
+                        try {
+                            var jsonValue = JSON.parse(monacoEditor.getValue());
+                            textArea.value = JSON.stringify(jsonValue);
+                        } catch (e) {
+                            // Invalid JSON, don't update
+                        }
+                    });
+                });
+            }
+
+            function loadValueIntoMonaco() {
+                if (!monacoEditor) return;
+
+                var editorInstance = window.editorJSInstances && window.editorJSInstances['@editorId'];
+                if (editorInstance) {
+                    editorInstance.save().then(function(outputData) {
+                        textArea.value = JSON.stringify(outputData);
+                        monacoEditor.getModel().setValue(JSON.stringify(outputData, null, 2));
+                        monacoEditor.layout();
+                    });
+                } else {
+                    try {
+                        var jsonValue = textArea.value ? JSON.parse(textArea.value) : { time: Date.now(), blocks: [], version: "2.28.0" };
+                        monacoEditor.getModel().setValue(JSON.stringify(jsonValue, null, 2));
+                    } catch (e) {
+                        monacoEditor.getModel().setValue(textArea.value || '{\n  "time": ' + Date.now() + ',\n  "blocks": [],\n  "version": "2.28.0"\n}');
+                    }
+                    monacoEditor.layout();
+                }
+            }
+
+            // Initialize Monaco when raw tab is first shown
+            document.getElementById('@editorId-raw-tab').addEventListener('shown.bs.tab', function () {
+                initMonaco();
+                // Small delay to ensure tab is visible before layout
+                setTimeout(function() {
+                    if (monacoEditor) {
+                        loadValueIntoMonaco();
+                    }
+                }, 50);
+            });
+
+            // When switching back to visual tab, reinitialize EditorJS with raw changes
+            document.getElementById('@editorId-visual-tab').addEventListener('shown.bs.tab', function () {
+                if (monacoEditor) {
+                    try {
+                        var jsonValue = JSON.parse(monacoEditor.getValue());
+                        textArea.value = JSON.stringify(jsonValue);
+                        initializeEditorJS('@tenantPath', '@editorId', '@dataId', '', '@partName', '@fieldName', '@settings.Placeholder');
+                    } catch (e) {
+                        console.warn('Invalid JSON in raw editor:', e);
+                    }
+                }
+            });
+
+            // Ensure Monaco syncs before form submit
+            window.addEventListener("submit", function () {
+                var rawTab = document.getElementById('@editorId-raw-tab');
+                if (rawTab && rawTab.classList.contains('active') && monacoEditor) {
+                    try {
+                        var jsonValue = JSON.parse(monacoEditor.getValue());
+                        textArea.value = JSON.stringify(jsonValue);
+                    } catch (e) {
+                        textArea.value = monacoEditor.getValue();
+                    }
+                }
+            });
+        });
+    </script>
+
+    <div class="modal" id="@editorId-ModalBody">
         <div class="modal-dialog modal-lg media-modal" role="document">
             <div class="modal-content">
                 <div class="modal-header">
