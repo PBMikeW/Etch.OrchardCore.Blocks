@@ -31,13 +31,8 @@ namespace Etch.OrchardCore.Blocks.Controllers
 
         #region Actions
 
-        public async Task<IActionResult> SearchContentItems(string part, string field, string query)
+        public async Task<IActionResult> SearchContentItems(string type, string part, string field, string query)
         {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-
             if (string.IsNullOrWhiteSpace(part))
             {
                 return BadRequest("Part is required parameter");
@@ -45,7 +40,6 @@ namespace Etch.OrchardCore.Blocks.Controllers
 
             try
             {
-                var linkableTypes = await GetLinkableTypesAsync(part, field);
                 return new ObjectResult(await _contentSearchResultsProvider.SearchAsync(new ContentSearchContext
                 {
                     ContentTypes = await GetLinkableTypes(type, part, field),
@@ -62,9 +56,8 @@ namespace Etch.OrchardCore.Blocks.Controllers
 
         #region Private Methods
 
-        private async Task <string[]> GetLinkableTypes(string type, string part, string field)
+        private async Task<string[]> GetLinkableTypes(string type, string part, string field)
         {
-            var linkableTypes = await GetLinkableTypesFromFieldDefinitionAsync(part, field);
             if (!string.IsNullOrEmpty(field))
             {
                 return await GetLinkableTypesFromFieldDefinition(part, field);
