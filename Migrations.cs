@@ -24,7 +24,7 @@ namespace Etch.OrchardCore.Blocks
 
         #region Migrations
 
-        public async Task<int> CreateAsync()
+        public async Task<int> Create()
         {
             await _contentDefinitionManager.AlterPartDefinitionAsync("BlockBodyPart", builder => builder
                 .Attachable()

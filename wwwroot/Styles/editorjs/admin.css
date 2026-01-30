@@ -13,7 +13,15 @@
  * padding-bottom as an inline style.
  */
 .codex-editor .codex-editor__redactor {
-  padding-bottom: 100px !important; /* 1. */
+  padding-bottom: 20px !important; /* 1. */
+}
+
+.ce-block__content, .ce-toolbar__content {
+  max-width: calc(100% - 80px) !important;
+}
+
+.cdx-block {
+  max-width: 100% !important;
 }
 
 /**
@@ -25,5 +33,10 @@
  */
 .ce-block--focused {
   background-color: rgba(207, 214, 229, 0.27);
+  background-image: none;
+}
+
+.codex-editor {
+  background-color: darkgrey;
   background-image: none;
 }

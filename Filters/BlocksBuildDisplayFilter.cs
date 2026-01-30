@@ -2,7 +2,7 @@
 using Etch.OrchardCore.Blocks.Parsers;
 using Fluid;
 using Fluid.Values;
-using Newtonsoft.Json.Linq;
+using System.Text.Json.Nodes;
 using OrchardCore.ContentManagement;
 using OrchardCore.Liquid;
 using System;
@@ -30,7 +30,7 @@ namespace Etch.OrchardCore.Blocks.Filters
                 {
                     contentItem = null;
 
-                    if (obj is JObject jObject)
+                    if (obj is JsonObject jObject)
                     {
                         contentItem = jObject.ToObject<ContentItem>();
                     }

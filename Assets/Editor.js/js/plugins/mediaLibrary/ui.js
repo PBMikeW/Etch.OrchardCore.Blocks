@@ -9,6 +9,9 @@ export default class Ui {
         this.api = api;
         this.onSelectFile = onSelectFile;
         this.nodes = {
+            linkUrl: make('div', ['cdx-input', 'media-library-item__link-url'], {
+                contentEditable: true,
+            }),
             caption: make('div', ['cdx-input', 'media-library-item__caption'], {
                 contentEditable: true,
             }),
@@ -20,10 +23,12 @@ export default class Ui {
         };
 
         this.nodes.caption.dataset.placeholder = 'Caption...';
+        this.nodes.linkUrl.dataset.placeholder = 'URL Link...';
 
         this.nodes.imageWrapper.appendChild(this.nodes.image);
         this.nodes.item.appendChild(this.nodes.imageWrapper);
         this.nodes.item.appendChild(this.nodes.caption);
+        this.nodes.item.appendChild(this.nodes.linkUrl);
         this.nodes.wrapper.appendChild(this.nodes.item);
 
         this.nodes.wrapper.appendChild(this.nodes.fileButton);
@@ -49,6 +54,10 @@ export default class Ui {
     getCaption() {
         return this.nodes.caption.innerHTML;
     }
+    
+    getLinkUrl() {
+      return this.nodes.linkUrl.innerText;
+    }
 
     render(toolData) {
         this.nodes.image.src = toolData.url;
@@ -57,6 +66,7 @@ export default class Ui {
         };
 
         this.nodes.caption.innerHTML = toolData.caption;
+        this.nodes.linkUrl.innerHTML = toolData.linkUrl;
 
         if (!toolData.url) {
             this.nodes.wrapper.classList.add('is-empty');

@@ -1,0 +1,61 @@
+﻿@using Etch.OrchardCore.Blocks.ViewModels.Blocks;
+@using Microsoft.AspNetCore.Mvc.Rendering
+@using System.IO
+@using System.Text.Encodings.Web
+@inject OrchardCore.Modules.Services.ISlugService SlugService
+@{
+    TagBuilder htmlTable = ConvertToHtmlTable(Model.Content, Model.WithHeadings);
+}
+@if (htmlTable != null)
+{
+    using (var writer = new StringWriter())
+    {
+        htmlTable.WriteTo(writer, HtmlEncoder.Default);
+        @Html.Raw(writer.ToString())
+    }
+}
+
+@functions {
+    public TagBuilder ConvertToHtmlTable(string[][] data, bool hasHeader)
+    {
+        if (data == null || data.Length == 0)
+        {
+            return null;
+        }
+
+        var table = new TagBuilder("table");
+        table.Attributes.Add("style", "border-collapse: collapse; width: 100%;");
+
+        int startRow = 0;
+
+        if (hasHeader)
+        {
+            var headerRow = new TagBuilder("tr");
+            foreach (var headerCell in data[0])
+            {
+                var th = new TagBuilder("th");
+                th.InnerHtml.AppendHtml(headerCell);
+                th.Attributes.Add("style", "padding: 8px; text-align: left; background-color: #f4f4f4; border: 1px solid #ddd;");
+                headerRow.InnerHtml.AppendHtml(th);
+            }
+            table.InnerHtml.AppendHtml(headerRow);
+            startRow = 1; // Start from the next row for the data
+        }
+
+        for (int i = startRow; i < data.Length; i++)
+        {
+            var row = new TagBuilder("tr");
+            foreach (var cell in data[i])
+            {
+                var td = new TagBuilder("td");
+                td.InnerHtml.AppendHtml(cell); // Use AppendHtml to render HTML content correctly
+                td.Attributes.Add("style", "padding: 8px; text-align: left; border: 1px solid #ddd;"); // Added left and right borders
+                row.InnerHtml.AppendHtml(td);
+            }
+            table.InnerHtml.AppendHtml(row);
+        }
+
+        return table;
+    }
+
+}
