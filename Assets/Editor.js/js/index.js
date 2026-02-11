@@ -11,7 +11,7 @@ import AnchorTune from 'editorjs-anchor';
 import LinkTool from './plugins/link';
 import TextColor from 'editorjs-text-color-plugin';
 const AlignmentTuneTool = require('editorjs-text-alignment-blocktune');
-import textSize from './plugins/text-size';
+import FontSizeTool from './plugins/fontSize';
 import MediaLibrary from './plugins/mediaLibrary';
 import Undo from 'editorjs-undo';
 import NestedList from '@editorjs/nested-list';
@@ -33,7 +33,7 @@ window.initializeEditorJS = (
   if (!$hiddenField) {
     return;
   }
-
+  
   const $form = $hiddenField.closest('form');
 
   if (!$form) {
@@ -79,48 +79,7 @@ window.initializeEditorJS = (
         }
       },
       delimiter: Delimiter,
-      fontSize0point8: {
-        class: textSize,
-        config: {
-          cssClass: "editor-fs-0point8",
-          buttonText: ".8"
-        }
-      },
-      fontSize0point9: {
-        class: textSize,
-        config: {
-          cssClass: "editor-fs-0point9",
-          buttonText: ".9"
-        }
-      },
-      fontSize1point0: {
-        class: textSize,
-        config: {
-          cssClass: "editor-fs-1point0",
-          buttonText: "1.0"
-        }
-      },
-      fontSize1point1: {
-        class: textSize,
-        config: {
-          cssClass: "editor-fs-1point1",
-          buttonText: "1.1"
-        }
-      },
-      fontSize1point2: {
-        class: textSize,
-        config: {
-          cssClass: "editor-fs-1point2",
-          buttonText: "1.2"
-        }
-      },
-      fontSize1point3: {
-        class: textSize,
-        config: {
-          cssClass: "editor-fs-1point3",
-          buttonText: "1.3"
-        }
-      },
+      fontSize: FontSizeTool,
       embed: {
         class: Embed,
         config: {
