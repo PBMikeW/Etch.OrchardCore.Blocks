@@ -127,28 +127,34 @@
             }
 
             // Initialize Monaco when raw tab is first shown
-            document.getElementById('@editorId-raw-tab').addEventListener('shown.bs.tab', function () {
-                initMonaco();
-                // Small delay to ensure tab is visible before layout
-                setTimeout(function() {
-                    if (monacoEditor) {
-                        loadValueIntoMonaco();
-                    }
-                }, 50);
-            });
+            var rawTab = document.getElementById('@editorId-raw-tab');
+            if (rawTab) {
+                rawTab.addEventListener('shown.bs.tab', function () {
+                    initMonaco();
+                    // Small delay to ensure tab is visible before layout
+                    setTimeout(function() {
+                        if (monacoEditor) {
+                            loadValueIntoMonaco();
+                        }
+                    }, 50);
+                });
+            }
 
             // When switching back to visual tab, reinitialize EditorJS with raw changes
-            document.getElementById('@editorId-visual-tab').addEventListener('shown.bs.tab', function () {
-                if (monacoEditor) {
-                    try {
-                        var jsonValue = JSON.parse(monacoEditor.getValue());
-                        textArea.value = JSON.stringify(jsonValue);
-                        initializeEditorJS('@tenantPath', '@editorId', '@dataId', '', '@partName', '@fieldName', '@settings.Placeholder');
-                    } catch (e) {
-                        console.warn('Invalid JSON in raw editor:', e);
+            var visualTab = document.getElementById('@editorId-visual-tab');
+            if (visualTab) {
+                visualTab.addEventListener('shown.bs.tab', function () {
+                    if (monacoEditor) {
+                        try {
+                            var jsonValue = JSON.parse(monacoEditor.getValue());
+                            textArea.value = JSON.stringify(jsonValue);
+                            initializeEditorJS('@tenantPath', '@editorId', '@dataId', '', '@partName', '@fieldName', '@settings.Placeholder');
+                        } catch (e) {
+                            console.warn('Invalid JSON in raw editor:', e);
+                        }
                     }
-                }
-            });
+                });
+            }
 
             // Ensure Monaco syncs before form submit
             window.addEventListener("submit", function () {
