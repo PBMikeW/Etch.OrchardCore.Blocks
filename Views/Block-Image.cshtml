@@ -6,6 +6,8 @@
         tag.AddCssClass("align--wide");
     }
 
+    string alignment = Model.Alignment ?? "center";
+    tag.AddCssClass($"align--{alignment}");
     tag.AddCssClass("figure");
 }
 

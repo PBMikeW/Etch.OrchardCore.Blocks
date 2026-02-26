@@ -36,6 +36,7 @@ export default class MediaLibraryTool {
             url: data.url || '',
             caption: data.caption || '',
             stretched: data.stretched !== undefined ? data.stretched : false,
+            alignment: data.alignment || 'center',
         };
 
         this.modalBodyElement = document.getElementById(
@@ -79,33 +80,65 @@ export default class MediaLibraryTool {
     }
 
     renderSettings() {
-        const settings = [
+        const alignments = [
             {
-                name: 'stretched',
-                icon: `<svg width="17" height="10" viewBox="0 0 17 10" xmlns="http://www.w3.org/2000/svg"><path d="M13.568 5.925H4.056l1.703 1.703a1.125 1.125 0 0 1-1.59 1.591L.962 6.014A1.069 1.069 0 0 1 .588 4.26L4.38.469a1.069 1.069 0 0 1 1.512 1.511L4.084 3.787h9.606l-1.85-1.85a1.069 1.069 0 1 1 1.512-1.51l3.792 3.791a1.069 1.069 0 0 1-.475 1.788L13.514 9.16a1.125 1.125 0 0 1-1.59-1.591l1.644-1.644z"/></svg>`,
+                name: 'left',
+                icon: '<svg width="17" height="10" viewBox="0 0 17 10" xmlns="http://www.w3.org/2000/svg"><rect x="0" y="0" width="2" height="10"/><rect x="4" y="2" width="13" height="6" rx="1"/></svg>',
+            },
+            {
+                name: 'center',
+                icon: '<svg width="17" height="10" viewBox="0 0 17 10" xmlns="http://www.w3.org/2000/svg"><rect x="0" y="2" width="4" height="6" rx="1"/><rect x="6" y="0" width="5" height="10" rx="1"/><rect x="13" y="2" width="4" height="6" rx="1"/></svg>',
+            },
+            {
+                name: 'right',
+                icon: '<svg width="17" height="10" viewBox="0 0 17 10" xmlns="http://www.w3.org/2000/svg"><rect x="15" y="0" width="2" height="10"/><rect x="0" y="2" width="13" height="6" rx="1"/></svg>',
             },
         ];
 
+        const stretched = {
+            name: 'stretched',
+            icon: '<svg width="17" height="10" viewBox="0 0 17 10" xmlns="http://www.w3.org/2000/svg"><path d="M13.568 5.925H4.056l1.703 1.703a1.125 1.125 0 0 1-1.59 1.591L.962 6.014A1.069 1.069 0 0 1 .588 4.26L4.38.469a1.069 1.069 0 0 1 1.512 1.511L4.084 3.787h9.606l-1.85-1.85a1.069 1.069 0 1 1 1.512-1.51l3.792 3.791a1.069 1.069 0 0 1-.475 1.788L13.514 9.16a1.125 1.125 0 0 1-1.59-1.591l1.644-1.644z"/></svg>',
+        };
+
         const wrapper = document.createElement('div');
 
-        settings.forEach(tune => {
-            let button = document.createElement('div');
-
+        // Alignment buttons
+        const alignButtons = [];
+        alignments.forEach(align => {
+            const button = document.createElement('div');
             button.classList.add('cdx-settings-button');
-            button.innerHTML = tune.icon;
+            button.innerHTML = align.icon;
+            button.title = `Align ${align.name}`;
 
-            if (this.data[tune.name]) {
+            if (this.data.alignment === align.name) {
                 button.classList.add(this.api.styles.settingsButtonActive);
-            } else {
-                button.classList.remove(this.api.styles.settingsButtonActive);
             }
 
             wrapper.appendChild(button);
+            alignButtons.push(button);
 
             button.addEventListener('click', () => {
-                this._toggleTune(tune.name);
-                button.classList.toggle(this.api.styles.settingsButtonActive);
+                this.data.alignment = align.name;
+                alignButtons.forEach(btn => btn.classList.remove(this.api.styles.settingsButtonActive));
+                button.classList.add(this.api.styles.settingsButtonActive);
+                this.ui.applyAlignment(this.data.alignment);
             });
+        });
+
+        // Stretched button
+        const stretchedButton = document.createElement('div');
+        stretchedButton.classList.add('cdx-settings-button');
+        stretchedButton.innerHTML = stretched.icon;
+
+        if (this.data.stretched) {
+            stretchedButton.classList.add(this.api.styles.settingsButtonActive);
+        }
+
+        wrapper.appendChild(stretchedButton);
+
+        stretchedButton.addEventListener('click', () => {
+            this._toggleTune('stretched');
+            stretchedButton.classList.toggle(this.api.styles.settingsButtonActive);
         });
 
         return wrapper;
@@ -155,6 +188,7 @@ export default class MediaLibraryTool {
             caption: '',
             mediaPath: media.mediaPath,
             url: media.url,
+            alignment: this.data.alignment || 'center',
         };
 
         this.ui.render(this.data);

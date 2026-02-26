@@ -3,7 +3,7 @@ using Etch.OrchardCore.Blocks.Parsers;
 using Etch.OrchardCore.Blocks.ViewModels;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Display.Models;
-using OrchardCore.DisplayManagement.ModelBinding;
+
 using OrchardCore.DisplayManagement.Views;
 using System.Threading.Tasks;
 
@@ -49,9 +49,9 @@ namespace Etch.OrchardCore.Blocks.Drivers
             });
         }
 
-        public override async Task<IDisplayResult> UpdateAsync(BlockBodyPart part, IUpdateModel updater, UpdatePartEditorContext context)
+        public override async Task<IDisplayResult> UpdateAsync(BlockBodyPart part, UpdatePartEditorContext context)
         {
-            await updater.TryUpdateModelAsync(part, Prefix, f => f.Data);
+            await context.Updater.TryUpdateModelAsync(part, Prefix, f => f.Data);
 
             return Edit(part, context);
         }

@@ -38,11 +38,40 @@
             font-weight: normal;
             opacity: 0;
         }
-        
+
         .media-library-item__caption[contentEditable=true][data-placeholder]:empty::before {
             opacity: 1;
         }
-        
+
         .media-library-item__caption[contentEditable=true][data-placeholder]:empty:focus::before {
             opacity: 0;
         }
+
+.media-library-tool.align--left .media-library-item__image {
+    text-align: left;
+}
+
+.media-library-tool.align--center .media-library-item__image {
+    text-align: center;
+}
+
+.media-library-tool.align--right .media-library-item__image {
+    text-align: right;
+}
+
+.media-library-tool.align--left .media-library-item__image img,
+.media-library-tool.align--right .media-library-item__image img {
+    max-width: 60%;
+}
+
+.media-library-tool.align--left .media-library-item__caption {
+    text-align: left;
+}
+
+.media-library-tool.align--center .media-library-item__caption {
+    text-align: center;
+}
+
+.media-library-tool.align--right .media-library-item__caption {
+    text-align: right;
+}

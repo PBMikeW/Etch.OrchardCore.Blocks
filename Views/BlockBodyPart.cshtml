@@ -1,10 +1,19 @@
-﻿@model Etch.OrchardCore.Blocks.ViewModels.DisplayBlockBodyPartViewModel
+@model Etch.OrchardCore.Blocks.ViewModels.DisplayBlockBodyPartViewModel
 
 <section class="section">
     <div class="section__content constrain">
         @foreach (var block in Model.Blocks)
         {
-            @await DisplayAsync(block)
+            if (!string.IsNullOrEmpty(block.Anchor))
+            {
+                <div id="@block.Anchor">
+                    @await DisplayAsync(block)
+                </div>
+            }
+            else
+            {
+                @await DisplayAsync(block)
+            }
         }
     </div>
 </section>

@@ -1,0 +1,10 @@
+@{
+    var style = !string.IsNullOrEmpty(Model.Style) ? Model.Style : "stdbluebutton";
+    var label = !string.IsNullOrEmpty(Model.Label) ? Model.Label : "Button";
+    var alignment = !string.IsNullOrEmpty(Model.Alignment) ? Model.Alignment : "left";
+    var justify = alignment == "center" ? "center" : alignment == "right" ? "flex-end" : "flex-start";
+}
+
+<div style="display: flex; justify-content: @justify">
+    <a href="@Model.Url" class="@style">@label</a>
+</div>

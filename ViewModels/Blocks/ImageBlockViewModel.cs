@@ -2,6 +2,7 @@
 {
     public class ImageBlockViewModel
     {
+        public string Alignment { get; set; } = "center";
         public string Caption { get; set; }
         public string MediaPath { get; set; }
         public bool Stretched { get; set; }

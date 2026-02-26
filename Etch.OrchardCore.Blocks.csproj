@@ -29,21 +29,26 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="OrchardCore.Admin" Version="1.8.3" />
-    <PackageReference Include="OrchardCore.Autoroute" Version="1.8.3" />
-    <PackageReference Include="OrchardCore.ContentManagement" Version="1.8.3" />
-    <PackageReference Include="OrchardCore.ContentManagement.Display" Version="1.8.3" />
-    <PackageReference Include="OrchardCore.DisplayManagement" Version="1.8.3" />
-    <PackageReference Include="OrchardCore.Liquid.Abstractions" Version="1.8.3" />
-    <PackageReference Include="OrchardCore.Media.Abstractions" Version="1.8.3" />
-    <PackageReference Include="OrchardCore.ResourceManagement" Version="1.8.3" />
-    <PackageReference Include="OrchardCore.Module.Targets" Version="1.8.3" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="OrchardCore.Module.Targets" Version="2.1.7" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\OrchardCore\src\OrchardCore.Modules\OrchardCore.Admin\OrchardCore.Admin.csproj" />
+    <ProjectReference Include="..\OrchardCore\src\OrchardCore\OrchardCore.Autoroute.Core\OrchardCore.Autoroute.Core.csproj" />
+    <ProjectReference Include="..\OrchardCore\src\OrchardCore\OrchardCore.ContentManagement\OrchardCore.ContentManagement.csproj" />
+    <ProjectReference Include="..\OrchardCore\src\OrchardCore\OrchardCore.ContentManagement.Display\OrchardCore.ContentManagement.Display.csproj" />
+    <ProjectReference Include="..\OrchardCore\src\OrchardCore\OrchardCore.ContentTypes.Abstractions\OrchardCore.ContentTypes.Abstractions.csproj" />
+    <ProjectReference Include="..\OrchardCore\src\OrchardCore\OrchardCore.DisplayManagement\OrchardCore.DisplayManagement.csproj" />
+    <ProjectReference Include="..\OrchardCore\src\OrchardCore\OrchardCore.Liquid.Abstractions\OrchardCore.Liquid.Abstractions.csproj" />
+    <ProjectReference Include="..\OrchardCore\src\OrchardCore\OrchardCore.Media.Abstractions\OrchardCore.Media.Abstractions.csproj" />
+    <ProjectReference Include="..\OrchardCore\src\OrchardCore\OrchardCore.ResourceManagement\OrchardCore.ResourceManagement.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
-  
+
   <Target Name="BuildStaticAssetsForRelease" BeforeTargets="BeforeBuild" Condition="'$(Configuration)' == 'Release'">
     <Exec Command="npm install" />
     <Exec Command="npm run build" />

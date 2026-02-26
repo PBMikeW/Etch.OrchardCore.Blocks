@@ -7,10 +7,12 @@ import Raw from '@editorjs/raw';
 import Quote from '@editorjs/quote';
 
 import EditorJS from '@editorjs/editorjs';
+import AnchorTune from 'editorjs-anchor';
 
 import LinkTool from './plugins/link';
 import MediaLibrary from './plugins/mediaLibrary';
-
+import KbButton from './plugins/kbButton';
+import Breadcrumb from './plugins/breadcrumb';
 window.initializeEditorJS = (
     tenantPath,
     id,
@@ -32,58 +34,67 @@ window.initializeEditorJS = (
         return;
     }
 
+    const baseTools = {
+        anchorTune: {
+            class: AnchorTune,
+        },
+        breadcrumb: Breadcrumb,
+        delimiter: Delimiter,
+        embed: {
+            class: Embed,
+            config: {
+                services: {
+                    'twitch-channel': true,
+                    'twitch-video': true,
+                    vimeo: true,
+                    youtube: true,
+                },
+            },
+            inlineToolbar: true,
+        },
+        header: {
+            class: Header,
+            inlineToolbar: true,
+        },
+        image: {
+            class: MediaLibrary,
+            config: {
+                id,
+            },
+        },
+        kbButton: KbButton,
+        link: {
+            class: LinkTool,
+            config: {
+                fieldName,
+                partName,
+                typeName,
+                tenantPath,
+            },
+        },
+        list: {
+            class: List,
+            inlineToolbar: true,
+        },
+        paragraph: {
+            class: Paragraph,
+            inlineToolbar: true,
+            config: {
+                preserveBlank: true,
+            },
+        },
+        quote: Quote,
+        raw: Raw,
+    };
+
     const editor = new EditorJS({
         holder: id,
 
         placeholder: placeholder || 'Enter your content here...',
 
-        tools: {
-            delimiter: Delimiter,
-            embed: {
-                class: Embed,
-                config: {
-                    services: {
-                        'twitch-channel': true,
-                        'twitch-video': true,
-                        vimeo: true,
-                        youtube: true,
-                    },
-                },
-                inlineToolbar: true,
-            },
-            header: {
-                class: Header,
-                inlineToolbar: true,
-            },
-            image: {
-                class: MediaLibrary,
-                config: {
-                    id,
-                },
-            },
-            link: {
-                class: LinkTool,
-                config: {
-                    fieldName,
-                    partName,
-                    typeName,
-                    tenantPath,
-                },
-            },
-            list: {
-                class: List,
-                inlineToolbar: true,
-            },
-            paragraph: {
-                class: Paragraph,
-                inlineToolbar: true,
-                config: {
-                    preserveBlank: true,
-                },
-            },
-            quote: Quote,
-            raw: Raw,
-        },
+        tools: baseTools,
+
+        tunes: ['anchorTune'],
 
         data: !$hiddenField.value ? {} : JSON.parse($hiddenField.value),
 

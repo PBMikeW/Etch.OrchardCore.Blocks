@@ -1,0 +1,36 @@
+.kb-button-tool {
+    padding: 10px 0;
+}
+
+    .kb-button-tool__field {
+        display: flex;
+        align-items: center;
+        margin-bottom: 8px;
+    }
+
+        .kb-button-tool__field label {
+            width: 60px;
+            flex-shrink: 0;
+            font-size: 13px;
+            color: #707684;
+        }
+
+        .kb-button-tool__field input,
+        .kb-button-tool__field select {
+            flex: 1;
+            padding: 6px 8px;
+            border: 1px solid #e8e8eb;
+            border-radius: 3px;
+            font-size: 14px;
+            outline: none;
+        }
+
+        .kb-button-tool__field input:focus,
+        .kb-button-tool__field select:focus {
+            border-color: #388ae5;
+        }
+
+    .kb-button-tool__preview {
+        margin-top: 12px;
+        text-align: center;
+    }

@@ -46,6 +46,13 @@ export default class Ui {
         return button;
     }
 
+    applyAlignment(alignment) {
+        this.nodes.wrapper.classList.remove('align--left', 'align--center', 'align--right');
+        if (alignment) {
+            this.nodes.wrapper.classList.add(`align--${alignment}`);
+        }
+    }
+
     getCaption() {
         return this.nodes.caption.innerHTML;
     }
@@ -57,6 +64,7 @@ export default class Ui {
         };
 
         this.nodes.caption.innerHTML = toolData.caption;
+        this.applyAlignment(toolData.alignment);
 
         if (!toolData.url) {
             this.nodes.wrapper.classList.add('is-empty');
