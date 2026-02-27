@@ -109,6 +109,11 @@ window.initializeEditorJS = (
         },
     });
 
+    // Expose editor instance so external code (e.g. block drag-and-drop) can
+    // use the Blocks API (insert, delete, move, update).
+    if (!window.__editorJSInstances) window.__editorJSInstances = {};
+    window.__editorJSInstances[id] = { editor, hiddenFieldId };
+
     const onSubmit = (e) => {
         editor
             .save()
