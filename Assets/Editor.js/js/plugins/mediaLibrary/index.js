@@ -3,6 +3,7 @@ import $ from 'jquery';
 
 import Ui from './ui';
 import './index.css';
+import { IconStretch, IconPicture } from '@codexteam/icons';
 
 const selectors = {
     mediaApp: '#mediaApp',
@@ -34,9 +35,12 @@ export default class MediaLibraryTool {
 
         this.data = {
             url: data.url || '',
+            baseUrl: data.baseUrl || data.url,
             caption: data.caption || '',
             stretched: data.stretched !== undefined ? data.stretched : false,
             alignment: data.alignment || 'center',
+            profileObject: data.profileObject !== undefined ? data.profileObject : this.profiles[3],
+            profile: data.profile !== undefined ? data.profile : this.profiles[3].name,
         };
 
         this.modalBodyElement = document.getElementById(
@@ -95,53 +99,34 @@ export default class MediaLibraryTool {
             },
         ];
 
-        const stretched = {
-            name: 'stretched',
-            icon: '<svg width="17" height="10" viewBox="0 0 17 10" xmlns="http://www.w3.org/2000/svg"><path d="M13.568 5.925H4.056l1.703 1.703a1.125 1.125 0 0 1-1.59 1.591L.962 6.014A1.069 1.069 0 0 1 .588 4.26L4.38.469a1.069 1.069 0 0 1 1.512 1.511L4.084 3.787h9.606l-1.85-1.85a1.069 1.069 0 1 1 1.512-1.51l3.792 3.791a1.069 1.069 0 0 1-.475 1.788L13.514 9.16a1.125 1.125 0 0 1-1.59-1.591l1.644-1.644z"/></svg>',
+        const alignmentActions = alignments.map(align => ({
+            icon: align.icon,
+            label: `Align ${align.name}`,
+            onActivate: () => {
+                this.data.alignment = align.name;
+                this.ui.applyAlignment(this.data.alignment);
+            },
+            closeOnActivate: true,
+            isActive: this.data.alignment === align.name,
+        }));
+
+        const profileActions = this.profiles.map(profile => ({
+            icon: profile.icon,
+            label: `Profile: ${profile.name}`,
+            onActivate: () => this.setProfile(profile),
+            closeOnActivate: true,
+            isActive: this.currentProfile.name === profile.name,
+        }));
+
+        const stretchedAction = {
+            icon: IconStretch,
+            label: 'Stretch image',
+            onActivate: () => this._toggleTune('stretched'),
+            closeOnActivate: true,
+            isActive: this.data.stretched === true,
         };
 
-        const wrapper = document.createElement('div');
-
-        // Alignment buttons
-        const alignButtons = [];
-        alignments.forEach(align => {
-            const button = document.createElement('div');
-            button.classList.add('cdx-settings-button');
-            button.innerHTML = align.icon;
-            button.title = `Align ${align.name}`;
-
-            if (this.data.alignment === align.name) {
-                button.classList.add(this.api.styles.settingsButtonActive);
-            }
-
-            wrapper.appendChild(button);
-            alignButtons.push(button);
-
-            button.addEventListener('click', () => {
-                this.data.alignment = align.name;
-                alignButtons.forEach(btn => btn.classList.remove(this.api.styles.settingsButtonActive));
-                button.classList.add(this.api.styles.settingsButtonActive);
-                this.ui.applyAlignment(this.data.alignment);
-            });
-        });
-
-        // Stretched button
-        const stretchedButton = document.createElement('div');
-        stretchedButton.classList.add('cdx-settings-button');
-        stretchedButton.innerHTML = stretched.icon;
-
-        if (this.data.stretched) {
-            stretchedButton.classList.add(this.api.styles.settingsButtonActive);
-        }
-
-        wrapper.appendChild(stretchedButton);
-
-        stretchedButton.addEventListener('click', () => {
-            this._toggleTune('stretched');
-            stretchedButton.classList.toggle(this.api.styles.settingsButtonActive);
-        });
-
-        return wrapper;
+        return [...alignmentActions, ...profileActions, stretchedAction];
     }
 
     save() {
@@ -184,11 +169,19 @@ export default class MediaLibraryTool {
      * Updates block with selected media item.
      */
     _setMedia(media) {
+        let url = media.url;
+        let baseUrl = url.split('?')[0];
+
+        url = baseUrl + '?width=' + this.data.profileObject.previewSize;
+
         this.data = {
             caption: '',
             mediaPath: media.mediaPath,
-            url: media.url,
+            url: url,
+            baseUrl: media.url,
             alignment: this.data.alignment || 'center',
+            profileObject: this.data.profileObject,
+            profile: this.data.profileObject.name,
         };
 
         this.ui.render(this.data);
@@ -204,5 +197,43 @@ export default class MediaLibraryTool {
                 this.api.blocks.stretchBlock(blockId, this.data[tune]);
             }, 0);
         }
+    }
+
+    get currentProfile() {
+        let profile = this.profiles.find(item => item.name === this.data.profile);
+
+        if (!profile) {
+            profile = this.profiles[3];
+        }
+
+        return profile;
+    }
+
+    setProfile(profileObject) {
+        let currentUrl = this.data.baseUrl !== undefined ? this.data.baseUrl : this.data.url;
+        let baseUrl = currentUrl.split('?')[0];
+
+        let url = baseUrl + '?width=' + profileObject.previewSize;
+
+        this.data = {
+            ...this.data,
+            url: url,
+            profile: profileObject.name,
+            profileObject: profileObject,
+        };
+
+        this.ui.render(this.data);
+    }
+
+    get profiles() {
+        return [
+            { name: '50x50', icon: IconPicture, previewSize: 50 },
+            { name: '75x75', icon: IconPicture, previewSize: 75 },
+            { name: '100x100', icon: IconPicture, previewSize: 100 },
+            { name: '160x160', icon: IconPicture, previewSize: 160 },
+            { name: '240x240', icon: IconPicture, previewSize: 240 },
+            { name: '480x480', icon: IconPicture, previewSize: 480 },
+            { name: '1024x1024', icon: IconPicture, previewSize: 1024 },
+        ];
     }
 }
