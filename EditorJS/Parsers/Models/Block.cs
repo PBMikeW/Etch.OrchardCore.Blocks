@@ -1,18 +1,18 @@
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Etch.OrchardCore.Blocks.EditorJS.Parsers.Models
 {
     public class Block
     {
-        [JsonProperty("type")]
+        [JsonPropertyName("type")]
         public string Type { get; set; }
 
-        [JsonProperty("data")]
+        [JsonPropertyName("data")]
         public IDictionary<string, object> Data { get; set; }
 
-        [JsonProperty("tunes")]
+        [JsonPropertyName("tunes")]
         public IDictionary<string, object> Tunes { get; set; }
 
         public T Get<T>(string property, T defaultValue)
@@ -22,8 +22,8 @@ namespace Etch.OrchardCore.Blocks.EditorJS.Parsers.Models
 
             var value = Data[property];
 
-            if (value is JToken jt)
-                return jt.ToObject<T>();
+            if (value is JsonElement je)
+                return je.Deserialize<T>();
 
             return (T)value;
         }
@@ -46,9 +46,10 @@ namespace Etch.OrchardCore.Blocks.EditorJS.Parsers.Models
             }
 
             var anchorTune = Tunes["anchorTune"];
-            if (anchorTune is JObject jObj && jObj.TryGetValue("anchor", out var anchor))
+            if (anchorTune is JsonElement je && je.ValueKind == JsonValueKind.Object
+                && je.TryGetProperty("anchor", out var anchor))
             {
-                var value = anchor.ToString();
+                var value = anchor.GetString();
                 return string.IsNullOrWhiteSpace(value) ? null : value;
             }
 
