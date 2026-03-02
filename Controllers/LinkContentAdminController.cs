@@ -45,7 +45,7 @@ namespace Etch.OrchardCore.Blocks.Controllers
                     ContentTypes = await GetLinkableTypes(type, part, field),
                     Query = query
                 }));
-            } 
+            }
             catch (Exception ex)
             {
                 return BadRequest(ex.Message);
@@ -56,7 +56,7 @@ namespace Etch.OrchardCore.Blocks.Controllers
 
         #region Private Methods
 
-        private async Task <string[]> GetLinkableTypes(string type, string part, string field)
+        private async Task<string[]> GetLinkableTypes(string type, string part, string field)
         {
             if (!string.IsNullOrEmpty(field))
             {
