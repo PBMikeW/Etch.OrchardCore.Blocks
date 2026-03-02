@@ -5,34 +5,36 @@ import List from '@editorjs/list';
 import Paragraph from '@editorjs/paragraph';
 import Raw from '@editorjs/raw';
 import Quote from '@editorjs/quote';
-
+import Table from '@editorjs/table';
 import EditorJS from '@editorjs/editorjs';
 import AnchorTune from 'editorjs-anchor';
 
 import LinkTool from './plugins/link';
+import FontSizeTool from './plugins/fontSize';
 import MediaLibrary from './plugins/mediaLibrary';
 import KbButton from './plugins/kbButton';
 import Breadcrumb from './plugins/breadcrumb';
+
 window.initializeEditorJS = (
-    tenantPath,
-    id,
-    hiddenFieldId,
-    typeName,
-    partName,
-    fieldName,
-    placeholder
+  tenantPath,
+  id,
+  hiddenFieldId,
+  typeName,
+  partName,
+  fieldName,
+  placeholder
 ) => {
-    const $hiddenField = document.getElementById(hiddenFieldId);
+  const $hiddenField = document.getElementById(hiddenFieldId);
 
-    if (!$hiddenField) {
-        return;
-    }
+  if (!$hiddenField) {
+    return;
+  }
 
-    const $form = $hiddenField.closest('form');
+  const $form = $hiddenField.closest('form');
 
-    if (!$form) {
-        return;
-    }
+  if (!$form) {
+    return;
+  }
 
     const baseTools = {
         anchorTune: {
@@ -52,6 +54,7 @@ window.initializeEditorJS = (
             },
             inlineToolbar: true,
         },
+        fontSize: FontSizeTool,
         header: {
             class: Header,
             inlineToolbar: true,
@@ -85,6 +88,14 @@ window.initializeEditorJS = (
         },
         quote: Quote,
         raw: Raw,
+        table: {
+            class: Table,
+            inlineToolbar: true,
+            config: {
+                rows: 2,
+                cols: 3,
+            },
+        },
     };
 
     const editor = new EditorJS({

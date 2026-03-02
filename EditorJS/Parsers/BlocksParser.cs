@@ -32,7 +32,8 @@ namespace Etch.OrchardCore.Blocks.EditorJS.Parsers
             { "list", new ListBlockParser() },
             { "paragraph", new ParagraphBlockParser() },
             { "quote", new QuoteBlockParser() },
-            { "raw", new RawBlockParser() }
+            { "raw", new RawBlockParser() },
+            { "table", new TableBlockParser() }
         };
 
         #endregion
@@ -103,7 +104,10 @@ namespace Etch.OrchardCore.Blocks.EditorJS.Parsers
         public async Task<IList<dynamic>> RenderAsync(BlockParserContext context, string data)
         {
             var shapes = new List<dynamic>();
-
+            if (data == null)
+            {
+                return shapes;
+            }
             foreach (var block in JConvert.DeserializeObject<EditorBlocks>(data).Blocks)
             {
                 if (!_parsers.ContainsKey(block.Type))

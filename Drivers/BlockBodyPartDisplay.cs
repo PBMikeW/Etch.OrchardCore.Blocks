@@ -1,4 +1,4 @@
-﻿using Etch.OrchardCore.Blocks.Models;
+using Etch.OrchardCore.Blocks.Models;
 using Etch.OrchardCore.Blocks.Parsers;
 using Etch.OrchardCore.Blocks.ViewModels;
 using OrchardCore.ContentManagement.Display.ContentDisplay;

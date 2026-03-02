@@ -8,11 +8,11 @@ namespace Etch.OrchardCore.Blocks.Settings
 {
     public class BlockFieldSettingsDriver : ContentPartFieldDefinitionDisplayDriver<BlockField>
     {
-        public override IDisplayResult Edit(ContentPartFieldDefinition model)
+        public override IDisplayResult Edit(ContentPartFieldDefinition partFieldDefinition)
         {
             return Initialize<BlockFieldSettings>("BlockFieldSettings_Edit", settings =>
             {
-                var existing = model.GetSettings<BlockFieldSettings>();
+                var existing = partFieldDefinition.GetSettings<BlockFieldSettings>();
                 settings.LinkableContentTypes = existing.LinkableContentTypes;
                 settings.Placeholder = existing.Placeholder;
             }).Location("Content");

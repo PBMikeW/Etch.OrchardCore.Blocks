@@ -67,6 +67,7 @@ namespace Etch.OrchardCore.Blocks
                 o.MemberAccessStrategy.Register<ParagraphBlockViewModel>();
                 o.MemberAccessStrategy.Register<QuoteBlockViewModel>();
                 o.MemberAccessStrategy.Register<RawBlockViewModel>();
+                o.MemberAccessStrategy.Register<TableBlockViewModel>();
             });
         }
     }

@@ -1,0 +1,45 @@
+﻿.fontsize-actions {
+    display: none; 
+    align-items: center;
+    justify-content: center;
+    padding: 0 6px;
+}
+
+.fontsize-actions--active {
+    display: flex;
+}
+
+.fontsize-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 1px solid #e8e8eb;
+    border-radius: 3px;
+    cursor: pointer;
+    padding: 4px;
+    width: 24px;
+    height: 24px;
+    color: #707684;
+    transition: background-color 0.1s;
+}
+
+.fontsize-btn:hover {
+    background-color: #eff2f5;
+    color: #000;
+}
+
+.fontsize-input {
+    width: 40px;
+    text-align: center;
+    background: transparent;
+    font-size: 13px;
+    font-weight: 500;
+    margin: 0 4px;
+    color: black;
+    border: 1px solid lightgrey;
+}
+
+.fontsize-input:focus {
+    outline: none;
+}
