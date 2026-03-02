@@ -1,6 +1,8 @@
 {
     "private": true,
     "scripts": {
+        "generate-icons": "node scripts/generate-heroicons.js",
+        "prebuild": "node scripts/generate-heroicons.js",
         "build": "webpack",
         "develop": "webpack --watch",
         "start": "npm install && npm run develop"
@@ -16,6 +18,7 @@
     },
     "homepage": "https://github.com/etchuk/Etch.OrchardCore.Blocks#readme",
     "devDependencies": {
+        "heroicons": "^2.1.1",
         "@babel/core": "^7.23.3",
         "@babel/preset-env": "^7.23.3",
         "@codexteam/icons": "^0.3.3",

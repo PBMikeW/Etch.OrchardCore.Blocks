@@ -17,7 +17,15 @@ namespace Etch.OrchardCore.Blocks.EditorJS.Parsers.Models
 
         public T Get<T>(string property, T defaultValue)
         {
-            return Has(property) ? (T)Data[property] : defaultValue;
+            if (!Has(property))
+                return defaultValue;
+
+            var value = Data[property];
+
+            if (value is JToken jt)
+                return jt.ToObject<T>();
+
+            return (T)value;
         }
 
         public string Get(string property)

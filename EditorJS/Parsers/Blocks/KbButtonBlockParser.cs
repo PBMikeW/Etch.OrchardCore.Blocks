@@ -14,7 +14,10 @@ namespace Etch.OrchardCore.Blocks.EditorJS.Parsers.Blocks
                     Url = block.Get("url"),
                     Label = block.Get("label"),
                     Style = block.Get("style"),
-                    Alignment = block.Get("alignment")
+                    Alignment = block.Get("alignment"),
+                    IconSvg = block.Get("iconSvg"),
+                    IconPosition = block.Get("iconPosition"),
+                    NewTab = block.Get<bool>("newTab", false)
                 }
             );
         }

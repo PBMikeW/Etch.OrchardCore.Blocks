@@ -1,36 +1,249 @@
+/* ── Container ────────────────────────────── */
 .kb-button-tool {
-    padding: 10px 0;
+  padding: 10px 0;
+  position: relative;
 }
 
-    .kb-button-tool__field {
-        display: flex;
-        align-items: center;
-        margin-bottom: 8px;
-    }
+/* ── WYSIWYG area ─────────────────────────── */
+.kb-button-tool__wysiwyg {
+  display: flex;
+  padding: 12px;
+}
 
-        .kb-button-tool__field label {
-            width: 60px;
-            flex-shrink: 0;
-            font-size: 13px;
-            color: #707684;
-        }
+/* Button replica */
+.kb-button-tool__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 1.2rem;
+  border-radius: 0.3rem;
+  font-family: 'Catamaran', sans-serif;
+  font-size: 0.95rem;
+  text-decoration: none;
+  cursor: pointer;
+  user-select: text;
+  line-height: 1.4;
+}
 
-        .kb-button-tool__field input,
-        .kb-button-tool__field select {
-            flex: 1;
-            padding: 6px 8px;
-            border: 1px solid #e8e8eb;
-            border-radius: 3px;
-            font-size: 14px;
-            outline: none;
-        }
+/* ── Simplified style replicas (editor only) ── */
+.kb-button-tool__btn.stdbluebutton {
+  background-color: #002D6A;
+  border: 2px solid #002D6A;
+  color: #fff;
+}
+.kb-button-tool__btn.stdwhitebutton {
+  background-color: #fff;
+  border: 2px solid #002D6A;
+  color: #002D6A;
+}
+.kb-button-tool__btn.stdredbutton {
+  background-color: #EF4123;
+  border: 2px solid #EF4123;
+  color: #fff;
+}
+.kb-button-tool__btn.stdgreybutton {
+  background-color: #EBEBEB;
+  border: 1px solid #DEDEDE;
+  color: #000;
+}
+.kb-button-tool__btn.stdblueclearbutton {
+  background-color: transparent;
+  border: 2px solid #002D6A;
+  color: #002D6A;
+}
+.kb-button-tool__btn.stdclearbutton {
+  background-color: transparent;
+  border: 2px solid #999;
+  color: #333;
+}
 
-        .kb-button-tool__field input:focus,
-        .kb-button-tool__field select:focus {
-            border-color: #388ae5;
-        }
+/* ── Icon inside button ───────────────────── */
+.kb-button-tool__btn-icon {
+  display: inline-flex;
+  align-items: center;
+}
+.kb-button-tool__btn-icon svg {
+  width: 20px;
+  height: 20px;
+}
 
-    .kb-button-tool__preview {
-        margin-top: 12px;
-        text-align: center;
-    }
+/* ── contentEditable label ────────────────── */
+.kb-button-tool__btn-label {
+  outline: none;
+  min-width: 20px;
+  cursor: text;
+}
+.kb-button-tool__btn-label:empty::before {
+  content: attr(data-placeholder);
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+/* ── Popover (hidden by default) ──────────── */
+.kb-button-tool__popover {
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  padding: 0 12px;
+  border-top: 0 solid #e8e8eb;
+  transition: max-height 0.2s ease, opacity 0.15s ease, padding 0.2s ease, border-top-width 0.1s ease;
+}
+
+.kb-button-tool__popover--open {
+  max-height: 400px;
+  opacity: 1;
+  padding: 10px 12px;
+  border-top: 1px solid #e8e8eb;
+  overflow: visible;
+}
+
+/* ── Fields inside popover ────────────────── */
+.kb-button-tool__field {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.kb-button-tool__field > label {
+  width: 50px;
+  flex-shrink: 0;
+  font-size: 13px;
+  color: #707684;
+}
+
+.kb-button-tool__field input[type="text"],
+.kb-button-tool__field select {
+  flex: 1;
+  padding: 6px 8px;
+  border: 1px solid #e8e8eb;
+  border-radius: 3px;
+  font-size: 14px;
+  outline: none;
+}
+
+.kb-button-tool__field input[type="text"]:focus,
+.kb-button-tool__field select:focus {
+  border-color: #388ae5;
+}
+
+/* ── Icon picker ──────────────────────────── */
+.kb-button-tool__icon-picker {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  position: relative;
+}
+
+.kb-button-tool__icon-search {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 8px;
+  border: 1px solid #e8e8eb;
+  border-radius: 3px;
+  font-size: 14px;
+  outline: none;
+}
+.kb-button-tool__icon-search:focus {
+  border-color: #388ae5;
+}
+
+/* Position toggle buttons */
+.kb-button-tool__icon-pos {
+  display: flex;
+  gap: 2px;
+}
+
+.kb-button-tool__icon-pos-btn {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #e8e8eb;
+  border-radius: 3px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 14px;
+  color: #707684;
+  padding: 0;
+  line-height: 1;
+}
+.kb-button-tool__icon-pos-btn:hover {
+  background: #f4f5f7;
+}
+.kb-button-tool__icon-pos-btn.active {
+  background: #388ae5;
+  border-color: #388ae5;
+  color: #fff;
+}
+
+/* Dropdown grid */
+.kb-button-tool__icon-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  max-height: 320px;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid #e8e8eb;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  margin-top: 4px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(36px, 1fr));
+  gap: 2px;
+  padding: 6px;
+}
+
+.kb-button-tool__icon-cell {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  cursor: pointer;
+  padding: 4px;
+  color: #333;
+}
+.kb-button-tool__icon-cell:hover {
+  background: #e8f0fe;
+}
+.kb-button-tool__icon-cell svg {
+  width: 22px;
+  height: 22px;
+}
+
+.kb-button-tool__icon-empty {
+  grid-column: 1 / -1;
+  padding: 12px;
+  text-align: center;
+  color: #999;
+  font-size: 13px;
+}
+
+/* ── Checkbox row ─────────────────────────── */
+.kb-button-tool__checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+  padding-left: 54px;
+}
+
+.kb-button-tool__checkbox-row label {
+  font-size: 13px;
+  color: #707684;
+  cursor: pointer;
+}
+
+.kb-button-tool__checkbox-row input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+}
