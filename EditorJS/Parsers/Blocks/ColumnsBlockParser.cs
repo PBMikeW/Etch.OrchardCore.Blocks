@@ -1,7 +1,8 @@
 using Etch.OrchardCore.Blocks.EditorJS.Parsers.Models;
 using Etch.OrchardCore.Blocks.ViewModels.Blocks;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
-using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace Etch.OrchardCore.Blocks.EditorJS.Parsers.Blocks
@@ -10,30 +11,26 @@ namespace Etch.OrchardCore.Blocks.EditorJS.Parsers.Blocks
     {
         public async Task<dynamic> RenderAsync(BlockParserContext context, Block block)
         {
-            var columnCount = 2;
-            if (block.Has("columnCount") && block.Data["columnCount"] is JsonElement countEl)
-            {
-                columnCount = countEl.GetInt32();
-            }
+            var columnCount = block.Get<int>("columnCount", 2);
 
             var columns = new List<ColumnsColumnViewModel>();
 
-            if (block.Has("columns") && block.Data["columns"] is JsonElement columnsEl)
+            if (block.Has("columns") && block.Data["columns"] is JArray columnsArr)
             {
-                foreach (var jCol in columnsEl.EnumerateArray())
+                foreach (var jCol in columnsArr)
                 {
                     var column = new ColumnsColumnViewModel();
 
-                    if (jCol.TryGetProperty("blocks", out var blocksEl)
-                        && blocksEl.ValueKind == JsonValueKind.Array
-                        && blocksEl.GetArrayLength() > 0
+                    var blocksToken = jCol["blocks"];
+                    if (blocksToken is JArray blocksArr
+                        && blocksArr.Count > 0
                         && context.ParseBlocksAsync != null)
                     {
-                        var editorBlocksJson = JsonSerializer.Serialize(new
+                        var editorBlocksJson = JsonConvert.SerializeObject(new
                         {
                             time = 0,
                             version = "2.28.2",
-                            blocks = blocksEl
+                            blocks = blocksArr
                         });
 
                         column.Blocks = await context.ParseBlocksAsync(context, editorBlocksJson);

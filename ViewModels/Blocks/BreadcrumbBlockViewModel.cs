@@ -5,7 +5,7 @@ namespace Etch.OrchardCore.Blocks.ViewModels.Blocks
     public class BreadcrumbBlockViewModel
     {
         public string Mode { get; set; }
-        public IList<BreadcrumbItem> Items { get; set; } = new List<BreadcrumbItem>();
+        public IList<BreadcrumbItem> BreadcrumbItems { get; set; } = new List<BreadcrumbItem>();
     }
 
     public class BreadcrumbItem

@@ -1,17 +1,17 @@
+using Newtonsoft.Json;
 using System.Collections.Generic;
-using System.Text.Json.Serialization;
 
 namespace Etch.OrchardCore.Blocks.EditorJS.Parsers.Models
 {
     public class EditorBlocks
     {
-        [JsonPropertyName("time")]
+        [JsonProperty("time")]
         public long Time { get; set; }
 
-        [JsonPropertyName("version")]
+        [JsonProperty("version")]
         public string Version { get; set; }
 
-        [JsonPropertyName("blocks")]
+        [JsonProperty("blocks")]
         public IList<Block> Blocks { get; set; }
     }
 }

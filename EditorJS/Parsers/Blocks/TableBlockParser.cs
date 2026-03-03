@@ -1,7 +1,7 @@
 using Etch.OrchardCore.Blocks.EditorJS.Parsers.Models;
 using Etch.OrchardCore.Blocks.ViewModels.Blocks;
+using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
-using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace Etch.OrchardCore.Blocks.EditorJS.Parsers.Blocks
@@ -12,17 +12,12 @@ namespace Etch.OrchardCore.Blocks.EditorJS.Parsers.Blocks
         {
             var content = new string[0][];
 
-            if (block.Has("content") && block.Data["content"] is JsonElement contentEl)
+            if (block.Has("content") && block.Data["content"] is JArray contentArr)
             {
                 var rows = new List<string[]>();
-                foreach (var row in contentEl.EnumerateArray())
+                foreach (var row in contentArr)
                 {
-                    var cells = new List<string>();
-                    foreach (var cell in row.EnumerateArray())
-                    {
-                        cells.Add(cell.GetString() ?? string.Empty);
-                    }
-                    rows.Add(cells.ToArray());
+                    rows.Add(row.ToObject<string[]>());
                 }
                 content = rows.ToArray();
             }

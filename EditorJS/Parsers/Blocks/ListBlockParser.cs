@@ -1,6 +1,6 @@
 using Etch.OrchardCore.Blocks.EditorJS.Parsers.Models;
 using Etch.OrchardCore.Blocks.ViewModels.Blocks;
-using System.Text.Json;
+using Newtonsoft.Json.Linq;
 using System.Threading.Tasks;
 
 namespace Etch.OrchardCore.Blocks.EditorJS.Parsers.Blocks
@@ -9,17 +9,10 @@ namespace Etch.OrchardCore.Blocks.EditorJS.Parsers.Blocks
     {
         public async Task<dynamic> RenderAsync(BlockParserContext context, Block block)
         {
-            var items = new string[0];
-
-            if (block.Has("items") && block.Data["items"] is JsonElement itemsEl)
-            {
-                items = itemsEl.Deserialize<string[]>();
-            }
-
             return await context.ShapeFactory.New.Block__List(
                 new ListBlockViewModel
                 {
-                    ListItems = items,
+                    ListItems = block.Has("items") ? (block.Data["items"] as JArray).ToObject<string[]>() : new string[0],
                     Style = block.Get("style")
                 }
             );

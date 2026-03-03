@@ -11,6 +11,7 @@ import AnchorTune from 'editorjs-anchor';
 
 import LinkTool from './plugins/link';
 import FontSizeTool from './plugins/fontSize';
+import FontColorTool from './plugins/fontColor';
 import MediaLibrary from './plugins/mediaLibrary';
 import KbButton from './plugins/kbButton';
 import Breadcrumb from './plugins/breadcrumb';
@@ -54,6 +55,7 @@ window.initializeEditorJS = (
             },
             inlineToolbar: true,
         },
+        fontColor: FontColorTool,
         fontSize: FontSizeTool,
         header: {
             class: Header,
