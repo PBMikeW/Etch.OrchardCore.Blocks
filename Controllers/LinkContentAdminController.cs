@@ -31,8 +31,13 @@ namespace Etch.OrchardCore.Blocks.Controllers
 
         #region Actions
 
-        public async Task<IActionResult> SearchContentItems(string type, string part, string field, string query)
+        public async Task<IActionResult> SearchContentItems(string part, string field, string query)
         {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
             if (string.IsNullOrWhiteSpace(part))
             {
                 return BadRequest("Part is required parameter");
@@ -40,12 +45,13 @@ namespace Etch.OrchardCore.Blocks.Controllers
 
             try
             {
+                var linkableTypes = await GetLinkableTypesAsync(part, field);
                 return new ObjectResult(await _contentSearchResultsProvider.SearchAsync(new ContentSearchContext
                 {
-                    ContentTypes = await GetLinkableTypes(type, part, field),
+                    ContentTypes = linkableTypes,
                     Query = query
                 }));
-            }
+            } 
             catch (Exception ex)
             {
                 return BadRequest(ex.Message);
@@ -56,33 +62,21 @@ namespace Etch.OrchardCore.Blocks.Controllers
 
         #region Private Methods
 
-        private async Task<string[]> GetLinkableTypes(string type, string part, string field)
+        private async Task<string[]> GetLinkableTypesAsync(string part, string field)
         {
+            var linkableTypes = await GetLinkableTypesFromFieldDefinitionAsync(part, field);
             if (!string.IsNullOrEmpty(field))
-            {
-                return await GetLinkableTypesFromFieldDefinition(part, field);
+            {                
+                return linkableTypes;
             }
 
-            return await GetLinkableTypesFromPartDefinition(type, part);
+            return linkableTypes;
         }
 
-        private async Task<string[]> GetLinkableTypesFromPartDefinition(string type, string part)
+        private async Task<string[]> GetLinkableTypesFromFieldDefinitionAsync(string part, string field)
         {
-            var typeDefinition = await _contentDefinitionManager.GetTypeDefinitionAsync(type);
-
-            var contentTypePartDefinition = typeDefinition.Parts.FirstOrDefault(p => p.Name == part);
-
-            if (contentTypePartDefinition == null)
-            {
-                throw new Exception("Unable to find part definition");
-            }
-
-            return contentTypePartDefinition.GetSettings<BlockBodyPartSettings>()?.LinkableContentTypes ?? Array.Empty<string>();
-        }
-
-        private async Task<string[]> GetLinkableTypesFromFieldDefinition(string part, string field)
-        {
-            var partFieldDefinition = (await _contentDefinitionManager.GetPartDefinitionAsync(part))?.Fields
+            var partDefinition = await _contentDefinitionManager.GetPartDefinitionAsync(part);
+            var partFieldDefinition = partDefinition?.Fields
                .FirstOrDefault(f => f.Name == field);
 
             var fieldSettings = partFieldDefinition?.GetSettings<BlockFieldSettings>();

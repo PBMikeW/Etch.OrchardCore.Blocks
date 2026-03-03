@@ -33,15 +33,15 @@ export default class MediaLibraryTool {
     this.api = api;
     this.config = config || {};
 
-    this.data = {
-      url: data.url || '',
-      baseUrl: data.baseUrl || data.url,
-      caption: data.caption || '',
-      linkUrl: data.linkUrl || '',
-      stretched: data.stretched !== undefined ? data.stretched : false,
-      profileObject: data.profileObject !== undefined ? data.profileObject : this.profiles[3],
-      profile: data.profile !== undefined ? data.profile : this.profiles[3].name,
-    };
+        this.data = {
+            url: data.url || '',
+            baseUrl: data.baseUrl || data.url,
+            caption: data.caption || '',
+            stretched: data.stretched !== undefined ? data.stretched : false,
+            alignment: data.alignment || 'center',
+            profileObject: data.profileObject !== undefined ? data.profileObject : this.profiles[3],
+            profile: data.profile !== undefined ? data.profile : this.profiles[3].name,
+        };
 
     this.modalBodyElement = document.getElementById(
       `${config.id}-ModalBody`
@@ -61,224 +61,178 @@ export default class MediaLibraryTool {
       case 'pattern':
         const src = event.detail.data;
 
-        this._setMedia({
-          mediaPath: src,
-          url: src,
-        });
+                this._setMedia({
+                    mediaPath: src,
+                    url: src,
+                });
 
-        break;
-      case 'tag':
-        const imgTag = event.detail.data;
+                break;
+            case 'tag':
+                const imgTag = event.detail.data;
 
-        this._setMedia({
-          mediaPath: imgTag.src,
-          url: imgTag.src,
-        });
+                this._setMedia({
+                    mediaPath: imgTag.src,
+                    url: imgTag.src,
+                });
 
-        break;
+                break;
+        }
     }
-  }
 
-  render() {
-    return this.ui.render(this.data);
-  }
+    render() {
+        return this.ui.render(this.data);
+    }
 
-  renderSettings() {
-    const settings = [
-      {
-        name: 'stretched',
-        icon: IconStretch,
-        text: 'Stretch image',
-      },
-    ];
-    let profiles = this.profiles.map(profile => ({
-      icon: profile.icon,
-      label: this.api.i18n.t(`Profile: ${profile.name}`),
-      onActivate: () => this.setProfile(profile),
-      closeOnActivate: true,
-      isActive: this.currentProfile.name === profile.name,
-    }));
+    renderSettings() {
+        const alignments = [
+            {
+                name: 'left',
+                icon: '<svg width="17" height="10" viewBox="0 0 17 10" xmlns="http://www.w3.org/2000/svg"><rect x="0" y="0" width="2" height="10"/><rect x="4" y="2" width="13" height="6" rx="1"/></svg>',
+            },
+            {
+                name: 'center',
+                icon: '<svg width="17" height="10" viewBox="0 0 17 10" xmlns="http://www.w3.org/2000/svg"><rect x="0" y="2" width="4" height="6" rx="1"/><rect x="6" y="0" width="5" height="10" rx="1"/><rect x="13" y="2" width="4" height="6" rx="1"/></svg>',
+            },
+            {
+                name: 'right',
+                icon: '<svg width="17" height="10" viewBox="0 0 17 10" xmlns="http://www.w3.org/2000/svg"><rect x="15" y="0" width="2" height="10"/><rect x="0" y="2" width="13" height="6" rx="1"/></svg>',
+            },
+        ];
 
-    let settingsActions = settings.map(setting => ({
-      icon: setting.icon,
-      label: setting.text,
-      onActivate: () => this._toggleTune(setting.name),
-      closeOnActivate: true,
-      isActive: this.data[setting.name] === true,
-    }));
+        const alignmentActions = alignments.map(align => ({
+            icon: align.icon,
+            label: `Align ${align.name}`,
+            onActivate: () => {
+                this.data.alignment = align.name;
+                this.ui.applyAlignment(this.data.alignment);
+            },
+            closeOnActivate: true,
+            isActive: this.data.alignment === align.name,
+        }));
 
-    return [...profiles, ...settingsActions];
-  }
+        const profileActions = this.profiles.map(profile => ({
+            icon: profile.icon,
+            label: `Profile: ${profile.name}`,
+            onActivate: () => this.setProfile(profile),
+            closeOnActivate: true,
+            isActive: this.currentProfile.name === profile.name,
+        }));
 
-  save() {
-    this.data.caption = this.ui.getCaption();
-    this.data.linkUrl = this.ui.getLinkUrl();
-    return this.data;
-  }
+        const stretchedAction = {
+            icon: IconStretch,
+            label: 'Stretch image',
+            onActivate: () => this._toggleTune('stretched'),
+            closeOnActivate: true,
+            isActive: this.data.stretched === true,
+        };
 
-  /**
-   * Opens the Orchard Core media library.
-   */
-  _openMediaLibrary() {
-    const self = this;
+        return [...alignmentActions, ...profileActions, stretchedAction];
+    }
 
-    $(selectors.mediaApp)
-      .detach()
-      .appendTo($(this.modalBodyElement).find(selectors.modalBody));
+    save() {
+        this.data.caption = this.ui.getCaption();
+        return this.data;
+    }
 
-    $(selectors.mediaApp).show();
+    /**
+     * Opens the Orchard Core media library.
+     */
+    _openMediaLibrary() {
+        const self = this;
 
-    const modal = new bootstrap.Modal($(this.modalBodyElement)[0]);
-    modal.show();
+        $(selectors.mediaApp)
+            .detach()
+            .appendTo($(this.modalBodyElement).find(selectors.modalBody));
 
-    $(this.modalBodyElement)
-      .find(selectors.mediaFieldSelectButton)
-      .off('click')
-      .on('click', async function () {
-        if (window.mediaApp.selectedMedias.length) {
-          self._setMedia(window.mediaApp.selectedMedias[0]);
+        $(selectors.mediaApp).show();
+
+        const modal = new bootstrap.Modal($(this.modalBodyElement)[0]);
+        modal.show();
+
+        $(this.modalBodyElement)
+            .find(selectors.mediaFieldSelectButton)
+            .off('click')
+            .on('click', async function () {
+                if (window.mediaApp.selectedMedias.length) {
+                    self._setMedia(window.mediaApp.selectedMedias[0]);
+                }
+
+                window.mediaApp.selectedMedias = [];
+
+                modal.hide();
+                return true;
+            });
+    }
+
+    /**
+     * Updates block with selected media item.
+     */
+    _setMedia(media) {
+        let url = media.url;
+        let baseUrl = url.split('?')[0];
+
+        url = baseUrl + '?width=' + this.data.profileObject.previewSize;
+
+        this.data = {
+            caption: '',
+            mediaPath: media.mediaPath,
+            url: url,
+            baseUrl: media.url,
+            alignment: this.data.alignment || 'center',
+            profileObject: this.data.profileObject,
+            profile: this.data.profileObject.name,
+        };
+
+        this.ui.render(this.data);
+    }
+
+    _toggleTune(tune) {
+        this.data[tune] = !this.data[tune];
+
+        if (tune === 'stretched') {
+            const blockId = this.api.blocks.getCurrentBlockIndex();
+
+            setTimeout(() => {
+                this.api.blocks.stretchBlock(blockId, this.data[tune]);
+            }, 0);
+        }
+    }
+
+    get currentProfile() {
+        let profile = this.profiles.find(item => item.name === this.data.profile);
+
+        if (!profile) {
+            profile = this.profiles[3];
         }
 
-        window.mediaApp.selectedMedias = [];
-
-        modal.hide();
-        return true;
-      });
-  }
-
-  /**
-   * Updates block with selected media item.
-   */
-  _setMedia(media) {
-    // Strip any existing query parameters
-    let baseUrl = media.url.split('?')[0];
-
-    // Add new width parameter
-    let url = baseUrl + '?width=' + this.data.profileObject.width + '&height=' + this.data.profileObject.height;
-
-    this.data = {
-      caption: '',
-      linkUrl: '',
-      mediaPath: media.mediaPath,
-      url:url,   
-      baseUrl: media.url,
-      profileObject: this.data.profileObject,
-      profile: this.data.profileObject.name
-    };
-
-    this.ui.render(this.data);
-  }
-
-  _toggleTune(tune) {
-    this.data[tune] = !this.data[tune];
-
-    if (tune === 'stretched') {
-      const blockId = this.api.blocks.getCurrentBlockIndex();
-
-      setTimeout(() => {
-        this.api.blocks.stretchBlock(blockId, this.data[tune]);
-      }, 0);
-    }
-  }
-
-  get currentProfile() {
-    let profile = this.profiles.find(levelItem => levelItem.name === this.data.profile);
-
-    if (!profile) {
-      profile = this.profiles[2];
+        return profile;
     }
 
-    return profile;
-  }
+    setProfile(profileObject) {
+        let currentUrl = this.data.baseUrl !== undefined ? this.data.baseUrl : this.data.url;
+        let baseUrl = currentUrl.split('?')[0];
 
-  setProfile(profileObject) {
-    // Strip any existing query parameters
-    let currentUrl = this.data.baseUrl !== undefined ? this.data.baseUrl : this.data.url;
-    let baseUrl = currentUrl.split('?')[0];
+        let url = baseUrl + '?width=' + profileObject.previewSize;
 
-    let url = baseUrl + '?width=' + profileObject.width + '&height=' + profileObject.height;
+        this.data = {
+            ...this.data,
+            url: url,
+            profile: profileObject.name,
+            profileObject: profileObject,
+        };
 
-    this.data = {
-      ...this.data,
-      caption: this.data.caption,
-      mediaPath: this.data.mediaPath,
-      baseUrl: this.data.baseUrl,
-      url: url,
-      profile: profileObject.name,
-      profileObject: profileObject
-    };
-    this.ui.render(this.data);
-  }
+        this.ui.render(this.data);
+    }
 
-  get profiles() {
-    const availableProfiles = [
-      {
-        name: '50x50',
-        icon: IconPicture,
-        width: 50,
-        height: 50
-      },
-      {
-        name: '75x75',
-        icon: IconPicture,
-        width: 75,
-        height: 75
-      },
-      {
-        name: '100x100',
-        icon: IconPicture,
-        width: 100,
-        height: 100
-      },
-      {
-        name: '160x160',
-        icon: IconPicture,
-        width: 160,
-        height: 160
-      },
-      {
-        name: '240x240',
-        icon: IconPicture,
-        width: 240,
-        height: 240
-      },
-      {
-        name: '480x480',
-        icon: IconPicture,
-        width: 480,
-        height: 480
-      },
-      {
-        name: '600x600',
-        icon: IconPicture,
-        width: 600,
-        height: 600
-      },
-      {
-        name: '1024x600',
-        icon: IconPicture,
-        width: 1024,
-        height: 600
-      },
-      {
-        name: '1024x1024',
-        icon: IconPicture,
-        width: 1024,
-        height: 1024
-      },
-      {
-        name: '2048x1024',
-        icon: IconPicture,
-        width: 2048,
-        height: 1024
-      },
-      {
-        name: '2048x2048',
-        icon: IconPicture,
-        width: 2048,
-        height: 2048
-      }
-    ];
-    return availableProfiles;
-  }
+    get profiles() {
+        return [
+            { name: '50x50', icon: IconPicture, previewSize: 50 },
+            { name: '75x75', icon: IconPicture, previewSize: 75 },
+            { name: '100x100', icon: IconPicture, previewSize: 100 },
+            { name: '160x160', icon: IconPicture, previewSize: 160 },
+            { name: '240x240', icon: IconPicture, previewSize: 240 },
+            { name: '480x480', icon: IconPicture, previewSize: 480 },
+            { name: '1024x1024', icon: IconPicture, previewSize: 1024 },
+        ];
+    }
 }

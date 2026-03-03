@@ -1,12 +1,11 @@
-﻿using Etch.OrchardCore.Blocks.EditorJS.Parsers.Blocks;
+using Etch.OrchardCore.Blocks.EditorJS.Parsers.Blocks;
 using Etch.OrchardCore.Blocks.EditorJS.Parsers.Models;
 using Etch.OrchardCore.Blocks.Fields;
 using Etch.OrchardCore.Blocks.Models;
 using Etch.OrchardCore.Blocks.Parsers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
-using System.Text.Json;
-using System.Text.Json.Nodes;
+using Newtonsoft.Json;
 using OrchardCore.ContentManagement;
 using OrchardCore.DisplayManagement;
 using OrchardCore.Liquid;
@@ -23,15 +22,18 @@ namespace Etch.OrchardCore.Blocks.EditorJS.Parsers
 
         private readonly IDictionary<string, IBlockParser> _parsers = new Dictionary<string, IBlockParser>
         {
+            { "breadcrumb", new BreadcrumbBlockParser() },
+            { "columns", new ColumnsBlockParser() },
             { "delimiter", new DelimiterBlockParser() },
             { "embed", new EmbedBlockParser() },
             { "header", new HeadingBlockParser() },
-            { "table", new TableBlockParser() },
             { "image", new ImageParser() },
+            { "kbButton", new KbButtonBlockParser() },
             { "list", new ListBlockParser() },
             { "paragraph", new ParagraphBlockParser() },
             { "quote", new QuoteBlockParser() },
-            { "raw", new RawBlockParser() }
+            { "raw", new RawBlockParser() },
+            { "table", new TableBlockParser() }
         };
 
         #endregion
@@ -63,52 +65,50 @@ namespace Etch.OrchardCore.Blocks.EditorJS.Parsers
 
         public async Task<IList<dynamic>> RenderAsync(BlockField field)
         {
-            return await RenderAsync(new BlockParserContext
-            {
-                ContentItem = field.ContentItem,
-                HttpContext = _httpContextAccessor.HttpContext,
-                LiquidTemplateManager = _liquidTemplateManager,
-                MediaFileStore = _mediaFileStore,
-                ShapeFactory = _shapeFactory
-            }, field.Data);
+            var context = CreateContext(field.ContentItem);
+            return await RenderAsync(context, field.Data);
         }
 
         public async Task<IList<dynamic>> RenderAsync(BlockBodyPart part)
         {
-            return await RenderAsync(new BlockParserContext
-            {
-                ContentItem = part.ContentItem,
-                HttpContext = _httpContextAccessor.HttpContext,
-                LiquidTemplateManager = _liquidTemplateManager,
-                MediaFileStore = _mediaFileStore,
-                ShapeFactory = _shapeFactory
-            }, part.Data);
+            var context = CreateContext(part.ContentItem);
+            return await RenderAsync(context, part.Data);
         }
 
         public async Task<IList<dynamic>> RenderAsync(string data, ContentItem contentItem)
         {
-            return await RenderAsync(new BlockParserContext
-            {
-                ContentItem = contentItem,
-                HttpContext = _httpContextAccessor.HttpContext,
-                LiquidTemplateManager = _liquidTemplateManager,
-                MediaFileStore = _mediaFileStore,
-                ShapeFactory = _shapeFactory
-            }, data);
+            var context = CreateContext(contentItem);
+            return await RenderAsync(context, data);
         }
 
         #endregion
 
         #region Private Methods
 
+        private BlockParserContext CreateContext(ContentItem contentItem)
+        {
+            var context = new BlockParserContext
+            {
+                ContentItem = contentItem,
+                HttpContext = _httpContextAccessor.HttpContext,
+                LiquidTemplateManager = _liquidTemplateManager,
+                MediaFileStore = _mediaFileStore,
+                ShapeFactory = _shapeFactory
+            };
+
+            context.ParseBlocksAsync = RenderAsync;
+
+            return context;
+        }
+
         public async Task<IList<dynamic>> RenderAsync(BlockParserContext context, string data)
         {
             var shapes = new List<dynamic>();
-            if(data == null)
+            if (data == null)
             {
                 return shapes;
             }
-            foreach (var block in JConvert.DeserializeObject<EditorBlocks>(data).Blocks)
+            foreach (var block in JsonConvert.DeserializeObject<EditorBlocks>(data).Blocks)
             {
                 if (!_parsers.ContainsKey(block.Type))
                 {
@@ -117,7 +117,15 @@ namespace Etch.OrchardCore.Blocks.EditorJS.Parsers
 
                 try
                 {
-                    shapes.Add(await _parsers[block.Type].RenderAsync(context, block));
+                    var shape = await _parsers[block.Type].RenderAsync(context, block);
+
+                    var anchor = block.GetAnchor();
+                    if (!string.IsNullOrEmpty(anchor))
+                    {
+                        shape.Anchor = anchor;
+                    }
+
+                    shapes.Add(shape);
                 }
                 catch (Exception ex)
                 {

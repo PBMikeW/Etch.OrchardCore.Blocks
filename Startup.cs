@@ -53,11 +53,16 @@ namespace Etch.OrchardCore.Blocks
 
             services.Configure<TemplateOptions>(o =>
             {
+                o.MemberAccessStrategy.Register<BreadcrumbBlockViewModel>();
+                o.MemberAccessStrategy.Register<BreadcrumbItem>();
+                o.MemberAccessStrategy.Register<ColumnsBlockViewModel>();
+                o.MemberAccessStrategy.Register<ColumnsColumnViewModel>();
                 o.MemberAccessStrategy.Register<DisplayBlockFieldViewModel>();
                 o.MemberAccessStrategy.Register<DisplayBlockBodyPartViewModel>();
                 o.MemberAccessStrategy.Register<EmbedBlockViewModel>();
                 o.MemberAccessStrategy.Register<HeadingBlockViewModel>();
                 o.MemberAccessStrategy.Register<ImageBlockViewModel>();
+                o.MemberAccessStrategy.Register<KbButtonBlockViewModel>();
                 o.MemberAccessStrategy.Register<ListBlockViewModel>();
                 o.MemberAccessStrategy.Register<ParagraphBlockViewModel>();
                 o.MemberAccessStrategy.Register<QuoteBlockViewModel>();

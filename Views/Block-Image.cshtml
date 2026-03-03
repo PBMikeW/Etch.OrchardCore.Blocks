@@ -6,11 +6,13 @@
         tag.AddCssClass("align--wide");
     }
 
+    string alignment = Model.Alignment ?? "center";
+    tag.AddCssClass($"align--{alignment}");
     tag.AddCssClass("figure");
 }
 
 @tag.RenderStartTag()
-    <img src="@Model.Url" class="block-image" alt="@Model.Caption" />
+    <img src="@Model.Url" alt="@Model.Caption" />
 
     @if (Model.HasCaption)
     {

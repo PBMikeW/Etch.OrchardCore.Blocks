@@ -11,10 +11,9 @@ namespace Etch.OrchardCore.Blocks.EditorJS.Parsers.Blocks
             return await context.ShapeFactory.New.Block__Image(
                 new ImageBlockViewModel
                 {
+                    Alignment = block.Get("alignment", "center"),
                     Caption = block.Get("caption"),
-                    LinkUrl = block.Get("linkUrl"),
                     Stretched = block.Get("stretched", false),
-                    Profile = block.Get("profile"),
                     Url = GetMediaUrl(context, block)
                 }
             );

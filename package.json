@@ -1,11 +1,10 @@
 {
     "private": true,
     "scripts": {
-        "build": "npm run build:dev",
-        "build:prod": "webpack --mode production",
-        "build:dev": "webpack --mode development",
-        "develop": "webpack --mode development --watch",
-        "watch": "webpack --mode development --watch",
+        "generate-icons": "node scripts/generate-heroicons.js",
+        "prebuild": "node scripts/generate-heroicons.js",
+        "build": "webpack",
+        "develop": "webpack --watch",
         "start": "npm install && npm run develop"
     },
     "repository": {
@@ -19,25 +18,23 @@
     },
     "homepage": "https://github.com/etchuk/Etch.OrchardCore.Blocks#readme",
     "devDependencies": {
-        "@babel/core": "^7.24.8",
-        "@babel/preset-env": "^7.24.8",
-        "@editorjs/delimiter": "1.4.2",
-        "@editorjs/editorjs": "2.30.6",
-        "@editorjs/embed": "2.7.6",
-        "@editorjs/header": "2.8.8",
-        "@editorjs/list": "1.10.0",
-        "@editorjs/nested-list": "^1.4.3",
-        "@editorjs/paragraph": "2.11.6",
-        "@editorjs/quote": "2.7.2",
-        "@editorjs/raw": "2.5.0",
-        "@editorjs/simple-image": "1.6.0",
-        "@editorjs/table": "2.4.2",
-        "@editorjs/warning": "^1.4.0",
-        "autoprefixer": "^10.4.19",
+        "@babel/core": "^7.23.3",
+        "@babel/preset-env": "^7.23.3",
+        "@codexteam/icons": "^0.3.3",
+        "@editorjs/delimiter": "^1.4.0",
+        "@editorjs/editorjs": "^2.28.2",
+        "@editorjs/embed": "^2.7.0",
+        "@editorjs/header": "^2.8.1",
+        "@editorjs/list": "^1.9.0",
+        "@editorjs/paragraph": "^2.11.3",
+        "@editorjs/quote": "^2.6.0",
+        "@editorjs/raw": "^2.5.0",
+        "@editorjs/simple-image": "^1.6.0",
+        "@editorjs/table": "^2.3.0",
+        "autoprefixer": "^10.4.16",
         "babel-loader": "^9.1.3",
         "css-loader": "^7.1.2",
-        "editorjs-text-color-plugin": "github:dariox64/editorjs-text-color-plugin",
-        "editorjs-undo": "2.0.28",
+        "heroicons": "^2.1.1",
         "mini-css-extract-plugin": "^2.9.0",
         "postcss": "^8.4.39",
         "postcss-loader": "^8.1.1",
@@ -48,12 +45,10 @@
         "webpack-cli": "^5.1.4"
     },
     "dependencies": {
-        "@codexteam/icons": "^0.3.3",
         "bootstrap": "^5.3.3",
-        "editorjs-anchor": "^1.1.3",
-        "editorjs-indent-tune": "^1.3.0",
-        "editorjs-text-alignment-blocktune": "^1.0.3",
+        "editorjs-anchor": "^1.0.0",
+        "editorjs-text-color-plugin": "^2.0.4",
         "jquery": "^3.7.1",
-        "jquery-ui": "^1.13.3"
+        "jquery-ui": "^1.13.2"
     }
 }

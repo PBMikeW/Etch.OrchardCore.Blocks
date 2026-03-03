@@ -1,0 +1,15 @@
+@{
+    var style = !string.IsNullOrEmpty(Model.Style) ? Model.Style : "stdbluebutton";
+    var label = !string.IsNullOrEmpty(Model.Label) ? Model.Label : "Button";
+    var alignment = !string.IsNullOrEmpty(Model.Alignment) ? Model.Alignment : "left";
+    var justify = alignment == "center" ? "center" : alignment == "right" ? "flex-end" : "flex-start";
+    var targetAttr = Model.NewTab ? " target=\"_blank\" rel=\"noopener noreferrer\"" : "";
+    var hasIcon = Model.HasIcon;
+    var linkStyle = hasIcon ? " style=\"display: inline-flex; align-items: center; gap: 0.4rem;\"" : "";
+}
+
+<div style="display: flex; justify-content: @justify">
+    <a href="@Model.Url" class="@style"@Html.Raw(targetAttr)@Html.Raw(linkStyle)>@if (hasIcon && Model.IsIconLeft)
+    {<span class="kb-button-icon kb-button-icon--left">@Html.Raw(Model.IconSvg)</span>}@label@if (hasIcon && !Model.IsIconLeft)
+    {<span class="kb-button-icon kb-button-icon--right">@Html.Raw(Model.IconSvg)</span>}</a>
+</div>

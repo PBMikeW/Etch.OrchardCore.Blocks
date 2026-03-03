@@ -1,4 +1,4 @@
-﻿namespace Etch.OrchardCore.Blocks.ViewModels.Blocks
+namespace Etch.OrchardCore.Blocks.ViewModels.Blocks
 {
     public class TableBlockViewModel
     {

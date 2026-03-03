@@ -1,0 +1,22 @@
+@{
+    var items = (IList<Etch.OrchardCore.Blocks.ViewModels.Blocks.BreadcrumbItem>)Model.BreadcrumbItems;
+}
+
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        @for (var i = 0; i < items.Count; i++)
+        {
+            var item = items[i];
+            var isLast = i == items.Count - 1;
+
+            if (isLast)
+            {
+                <li class="breadcrumb-item active" aria-current="page">@item.Label</li>
+            }
+            else
+            {
+                <li class="breadcrumb-item"><a href="@item.Url">@item.Label</a></li>
+            }
+        }
+    </ol>
+</nav>
