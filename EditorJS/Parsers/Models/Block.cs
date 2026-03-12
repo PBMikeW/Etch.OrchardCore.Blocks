@@ -54,5 +54,22 @@ namespace Etch.OrchardCore.Blocks.EditorJS.Parsers.Models
 
             return null;
         }
+
+        public string GetAlignment()
+        {
+            if (Tunes == null || !Tunes.ContainsKey("alignmentTune"))
+            {
+                return null;
+            }
+
+            var alignmentTune = Tunes["alignmentTune"];
+            if (alignmentTune is JObject jo && jo.TryGetValue("alignment", out var alignment))
+            {
+                var value = alignment.ToString();
+                return string.IsNullOrWhiteSpace(value) ? null : value;
+            }
+
+            return null;
+        }
     }
 }

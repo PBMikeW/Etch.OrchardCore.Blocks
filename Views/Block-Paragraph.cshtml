@@ -1,1 +1,4 @@
-﻿<p>@Html.Raw(Model.Text)</p>
+﻿@{
+    string textAlignment = Model.TextAlignment;
+}
+<p@(textAlignment != null ? Html.Raw($" style=\"text-align:{textAlignment}\"") : null)>@Html.Raw(Model.Text)</p>

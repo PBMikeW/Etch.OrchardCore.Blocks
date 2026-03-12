@@ -125,6 +125,12 @@ namespace Etch.OrchardCore.Blocks.EditorJS.Parsers
                         shape.Anchor = anchor;
                     }
 
+                    var alignment = block.GetAlignment();
+                    if (!string.IsNullOrEmpty(alignment))
+                    {
+                        shape.TextAlignment = alignment;
+                    }
+
                     shapes.Add(shape);
                 }
                 catch (Exception ex)

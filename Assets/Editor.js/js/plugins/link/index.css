@@ -49,3 +49,24 @@
             .link-tool-editor__content-items li button:hover {
                 color: #a8d6ff;
             }
+
+    .link-tool-editor__header {
+        font-size: 11px;
+        color: #707684;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 4px;
+        padding-bottom: 4px;
+        border-bottom: 1px solid #e8e8eb;
+    }
+
+    .link-tool-editor__empty {
+        font-size: 12px;
+        color: #999;
+        font-style: italic;
+    }
+
+    .link-tool-editor__content-items li button small {
+        color: #999;
+        margin-left: 4px;
+    }

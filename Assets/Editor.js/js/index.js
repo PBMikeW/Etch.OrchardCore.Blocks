@@ -7,7 +7,8 @@ import Raw from '@editorjs/raw';
 import Quote from '@editorjs/quote';
 import Table from '@editorjs/table';
 import EditorJS from '@editorjs/editorjs';
-import AnchorTune from 'editorjs-anchor';
+import AnchorTune from './plugins/anchorTuneWrapper';
+import AlignmentTune from './plugins/alignmentTune';
 import TextColor from 'editorjs-text-color-plugin';
 
 import LinkTool from './plugins/link';
@@ -39,6 +40,7 @@ window.initializeEditorJS = (
   }
 
     const baseTools = {
+        alignmentTune: AlignmentTune,
         anchorTune: {
             class: AnchorTune,
         },
@@ -125,7 +127,7 @@ window.initializeEditorJS = (
 
         tools: baseTools,
 
-        tunes: ['anchorTune'],
+        tunes: ['alignmentTune', 'anchorTune'],
 
         data: !$hiddenField.value ? {} : JSON.parse($hiddenField.value),
 
