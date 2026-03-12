@@ -42,12 +42,7 @@ export default class MediaLibraryTool {
             profileObject: data.profileObject !== undefined ? data.profileObject : this.profiles[3],
             profile: data.profile !== undefined ? data.profile : this.profiles[3].name,
             linkUrl: data.linkUrl || '',
-<<<<<<< Updated upstream
-            linkNewTab: data.linkNewTab !== undefined ? data.linkNewTab : false,
-            anchor: data.anchor || '',
-=======
             linkNewTab: data.linkNewTab || false,
->>>>>>> Stashed changes
         };
 
     this.modalBodyElement = document.getElementById(
@@ -172,69 +167,6 @@ export default class MediaLibraryTool {
             isActive: this.data.stretched === true,
         };
 
-<<<<<<< Updated upstream
-        // Custom HTML element for link URL, new tab toggle, and anchor
-        const wrapper = document.createElement('div');
-        wrapper.classList.add('media-library-settings');
-
-        // Link URL field
-        const linkGroup = document.createElement('div');
-        linkGroup.classList.add('media-library-settings__field');
-        const linkLabel = document.createElement('label');
-        linkLabel.textContent = 'Link URL';
-        const linkInput = document.createElement('input');
-        linkInput.type = 'text';
-        linkInput.classList.add('cdx-input', 'media-library-settings__input');
-        linkInput.placeholder = 'https://...';
-        linkInput.value = this.data.linkUrl || '';
-        linkInput.addEventListener('input', () => {
-            this.data.linkUrl = linkInput.value;
-        });
-        linkInput.addEventListener('change', () => this._persistToHiddenField());
-        linkGroup.appendChild(linkLabel);
-        linkGroup.appendChild(linkInput);
-
-        // New tab toggle
-        const newTabGroup = document.createElement('div');
-        newTabGroup.classList.add('media-library-settings__field', 'media-library-settings__field--inline');
-        const newTabCheckbox = document.createElement('input');
-        newTabCheckbox.type = 'checkbox';
-        newTabCheckbox.id = 'image-link-newtab-' + Date.now();
-        newTabCheckbox.checked = this.data.linkNewTab || false;
-        newTabCheckbox.addEventListener('change', () => {
-            this.data.linkNewTab = newTabCheckbox.checked;
-            this._persistToHiddenField();
-        });
-        const newTabLabel = document.createElement('label');
-        newTabLabel.htmlFor = newTabCheckbox.id;
-        newTabLabel.textContent = 'Open in new tab';
-        newTabGroup.appendChild(newTabCheckbox);
-        newTabGroup.appendChild(newTabLabel);
-
-        // Anchor field
-        const anchorGroup = document.createElement('div');
-        anchorGroup.classList.add('media-library-settings__field');
-        const anchorLabel = document.createElement('label');
-        anchorLabel.textContent = 'Anchor';
-        const anchorInput = document.createElement('input');
-        anchorInput.type = 'text';
-        anchorInput.classList.add('cdx-input', 'media-library-settings__input');
-        anchorInput.placeholder = 'my-image';
-        anchorInput.value = this.data.anchor || '';
-        anchorInput.addEventListener('input', () => {
-            this.data.anchor = anchorInput.value.replace(/[^a-z0-9_-]/gi, '').toLowerCase();
-            anchorInput.value = this.data.anchor;
-        });
-        anchorInput.addEventListener('change', () => this._persistToHiddenField());
-        anchorGroup.appendChild(anchorLabel);
-        anchorGroup.appendChild(anchorInput);
-
-        wrapper.appendChild(linkGroup);
-        wrapper.appendChild(newTabGroup);
-        wrapper.appendChild(anchorGroup);
-
-        return [...alignmentActions, ...profileActions, stretchedAction, { type: 'html', element: wrapper }];
-=======
         return [
             {
                 type: 'html',
@@ -245,7 +177,6 @@ export default class MediaLibraryTool {
             ...profileActions,
             stretchedAction,
         ];
->>>>>>> Stashed changes
     }
 
     save() {
@@ -302,10 +233,6 @@ export default class MediaLibraryTool {
             profile: this.data.profileObject.name,
             linkUrl: this.data.linkUrl || '',
             linkNewTab: this.data.linkNewTab || false,
-<<<<<<< Updated upstream
-            anchor: this.data.anchor || '',
-=======
->>>>>>> Stashed changes
         };
 
         this.ui.render(this.data);

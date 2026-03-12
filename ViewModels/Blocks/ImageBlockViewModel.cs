@@ -1,4 +1,4 @@
-﻿namespace Etch.OrchardCore.Blocks.ViewModels.Blocks
+namespace Etch.OrchardCore.Blocks.ViewModels.Blocks
 {
     public class ImageBlockViewModel
     {
@@ -10,27 +10,8 @@
         public string Url { get; set; }
         public string LinkUrl { get; set; }
         public bool LinkNewTab { get; set; }
-<<<<<<< Updated upstream
-        public string ImageAnchor { get; set; }
-
-        public bool HasCaption
-        {
-            get { return !string.IsNullOrWhiteSpace(Caption); }
-        }
-
-        public bool HasLink
-        {
-            get { return !string.IsNullOrWhiteSpace(LinkUrl); }
-        }
-
-        public bool HasImageAnchor
-        {
-            get { return !string.IsNullOrWhiteSpace(ImageAnchor); }
-        }
-=======
 
         public bool HasCaption => !string.IsNullOrWhiteSpace(Caption);
         public bool HasLink => !string.IsNullOrWhiteSpace(LinkUrl);
->>>>>>> Stashed changes
     }
 }

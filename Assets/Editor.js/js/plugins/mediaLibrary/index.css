@@ -76,52 +76,6 @@
     text-align: right;
 }
 
-<<<<<<< Updated upstream
-/* Settings panel fields for link, new tab, and anchor */
-.media-library-settings {
-    padding: 8px 12px;
-    border-top: 1px solid #e8e8eb;
-}
-
-.media-library-settings__field {
-    margin-bottom: 8px;
-}
-
-.media-library-settings__field:last-child {
-    margin-bottom: 0;
-}
-
-.media-library-settings__field label {
-    display: block;
-    font-size: 12px;
-    color: #707684;
-    margin-bottom: 4px;
-}
-
-.media-library-settings__field--inline {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.media-library-settings__field--inline label {
-    display: inline;
-    margin-bottom: 0;
-}
-
-.media-library-settings__input {
-    font-size: 13px;
-    padding: 4px 8px;
-    border: 1px solid #e8e8eb;
-    border-radius: 3px;
-    width: 100%;
-    box-sizing: border-box;
-}
-
-.media-library-settings__input:focus {
-    border-color: #388ae5;
-    outline: none;
-=======
 /* Link settings in block settings popover */
 .media-library-link-settings {
     padding: 6px 10px;
@@ -157,5 +111,4 @@
     font-size: 12px;
     color: #707684;
     cursor: pointer;
->>>>>>> Stashed changes
 }
