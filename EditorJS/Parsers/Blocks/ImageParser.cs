@@ -13,11 +13,15 @@ namespace Etch.OrchardCore.Blocks.EditorJS.Parsers.Blocks
                 {
                     Alignment = block.Get("alignment", "center"),
                     Caption = block.Get("caption"),
+                    Profile = block.Get("profile"),
                     Stretched = block.Get("stretched", false),
                     Url = GetMediaUrl(context, block),
                     LinkUrl = block.Get("linkUrl"),
                     LinkNewTab = block.Get("linkNewTab", false),
+<<<<<<< Updated upstream
                     ImageAnchor = block.Get("anchor"),
+=======
+>>>>>>> Stashed changes
                 }
             );
         }

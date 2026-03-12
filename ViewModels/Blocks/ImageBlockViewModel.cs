@@ -5,10 +5,12 @@
         public string Alignment { get; set; } = "center";
         public string Caption { get; set; }
         public string MediaPath { get; set; }
+        public string Profile { get; set; }
         public bool Stretched { get; set; }
         public string Url { get; set; }
         public string LinkUrl { get; set; }
         public bool LinkNewTab { get; set; }
+<<<<<<< Updated upstream
         public string ImageAnchor { get; set; }
 
         public bool HasCaption
@@ -25,5 +27,10 @@
         {
             get { return !string.IsNullOrWhiteSpace(ImageAnchor); }
         }
+=======
+
+        public bool HasCaption => !string.IsNullOrWhiteSpace(Caption);
+        public bool HasLink => !string.IsNullOrWhiteSpace(LinkUrl);
+>>>>>>> Stashed changes
     }
 }
