@@ -1,12 +1,32 @@
 @model Etch.OrchardCore.Blocks.ViewModels.DisplayBlockBodyPartViewModel
-
+@{
+    var spacerMap = new Dictionary<string, string>
+    {
+        ["1"] = "0.25rem", ["2"] = "0.5rem", ["3"] = "1rem",
+        ["4"] = "1.5rem", ["5"] = "3rem", ["6"] = "4rem",
+        ["7"] = "5rem", ["8"] = "6rem", ["9"] = "7rem", ["10"] = "9rem"
+    };
+}
 <section class="section">
     <div class="section__content constrain">
         @foreach (var block in Model.Blocks)
         {
-            if (!string.IsNullOrEmpty(block.Anchor))
+            string paddingTop = block.PaddingTop;
+            string paddingBottom = block.PaddingBottom;
+            var paddingParts = new List<string>();
+            if (!string.IsNullOrEmpty(paddingTop) && spacerMap.TryGetValue(paddingTop, out var topVal))
             {
-                <div id="@block.Anchor">
+                paddingParts.Add($"padding-top:{topVal}");
+            }
+            if (!string.IsNullOrEmpty(paddingBottom) && spacerMap.TryGetValue(paddingBottom, out var bottomVal))
+            {
+                paddingParts.Add($"padding-bottom:{bottomVal}");
+            }
+            string paddingStyle = paddingParts.Count > 0 ? string.Join(";", paddingParts) : null;
+
+            if (!string.IsNullOrEmpty(block.Anchor) || paddingStyle != null)
+            {
+                <div@(block.Anchor != null ? Html.Raw($" id=\"{block.Anchor}\"") : null)@(paddingStyle != null ? Html.Raw($" style=\"{paddingStyle}\"") : null)>
                     @await DisplayAsync(block)
                 </div>
             }

@@ -9,6 +9,7 @@ import Table from '@editorjs/table';
 import EditorJS from '@editorjs/editorjs';
 import AnchorTune from './plugins/anchorTuneWrapper';
 import AlignmentTune from './plugins/alignmentTune';
+import PaddingTune from './plugins/paddingTune';
 import TextColor from 'editorjs-text-color-plugin';
 
 import LinkTool from './plugins/link';
@@ -44,6 +45,7 @@ window.initializeEditorJS = (
         anchorTune: {
             class: AnchorTune,
         },
+        paddingTune: PaddingTune,
         breadcrumb: Breadcrumb,
         Color: {
             class: TextColor,
@@ -127,7 +129,7 @@ window.initializeEditorJS = (
 
         tools: baseTools,
 
-        tunes: ['alignmentTune', 'anchorTune'],
+        tunes: ['alignmentTune', 'anchorTune', 'paddingTune'],
 
         data: !$hiddenField.value ? {} : JSON.parse($hiddenField.value),
 
