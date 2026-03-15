@@ -5,7 +5,7 @@ import './index.css';
  *
  * Adds left / center / right alignment buttons to every block's
  * settings toolbar. Stores the value in block tunes as:
- *   { alignmentTune: { alignment: "left" | "center" | "right" } }
+ *   { alignmentTune: { alignment: "left" | "center" | "right" | "justify" } }
  *
  * Applies `text-align` to the block wrapper in the editor so the
  * preview matches the published page.
@@ -41,6 +41,11 @@ export default class AlignmentTune {
         name: 'right',
         icon: '<svg width="16" height="11" viewBox="0 0 16 11" xmlns="http://www.w3.org/2000/svg"><line x1="0" y1="0.5" x2="16" y2="0.5" stroke="currentColor" stroke-width="1.5"/><line x1="6" y1="4.5" x2="16" y2="4.5" stroke="currentColor" stroke-width="1.5"/><line x1="3" y1="8.5" x2="16" y2="8.5" stroke="currentColor" stroke-width="1.5"/></svg>',
         label: 'Align right',
+      },
+      {
+        name: 'justify',
+        icon: '<svg width="16" height="11" viewBox="0 0 16 11" xmlns="http://www.w3.org/2000/svg"><line x1="0" y1="0.5" x2="16" y2="0.5" stroke="currentColor" stroke-width="1.5"/><line x1="0" y1="4.5" x2="16" y2="4.5" stroke="currentColor" stroke-width="1.5"/><line x1="0" y1="8.5" x2="16" y2="8.5" stroke="currentColor" stroke-width="1.5"/></svg>',
+        label: 'Justify',
       },
     ];
 
