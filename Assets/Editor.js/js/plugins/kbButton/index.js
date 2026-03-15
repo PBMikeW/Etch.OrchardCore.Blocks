@@ -208,20 +208,16 @@ export default class KbButton {
       }
     });
 
-    // Click the button (not the label) → toggle popover
-    this.btnEl.addEventListener('click', (e) => {
-      // Don't toggle when user is editing the label text
-      if (e.target === this.labelEl) return;
+    // Click anywhere in the block area → toggle popover.
+    // Clicks inside the popover or icon dropdown are excluded so inputs stay usable.
+    this.wrapper.addEventListener('click', (e) => {
+      if (e.target.closest('.kb-button-tool__popover')) return;
+      if (e.target.closest('.kb-button-tool__icon-dropdown')) return;
       if (this._popoverOpen) {
         this._hidePopover();
       } else {
         this._showPopover();
       }
-    });
-
-    // Also show popover when label is focused (so settings are accessible)
-    this.labelEl.addEventListener('focus', () => {
-      this._showPopover();
     });
 
     this._updateButtonIcon();

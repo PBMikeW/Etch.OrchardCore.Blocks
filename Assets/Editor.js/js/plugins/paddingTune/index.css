@@ -1,0 +1,39 @@
+.padding-tune {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px 8px;
+}
+
+.padding-tune__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.padding-tune__label {
+  font-size: 12px;
+  color: #707684;
+  min-width: 48px;
+}
+
+.padding-tune__select {
+  flex: 1;
+  padding: 2px 4px;
+  border: 1px solid #dde0e4;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #1d202b;
+  background: #fff;
+  cursor: pointer;
+  outline: none;
+}
+
+.padding-tune__select:hover {
+  border-color: #388ae5;
+}
+
+.padding-tune__select:focus {
+  border-color: #388ae5;
+  box-shadow: 0 0 0 2px rgba(56, 138, 229, 0.15);
+}

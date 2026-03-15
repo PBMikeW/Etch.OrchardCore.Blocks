@@ -1,4 +1,4 @@
-﻿using Etch.OrchardCore.Blocks.EditorJS.Parsers.Models;
+using Etch.OrchardCore.Blocks.EditorJS.Parsers.Models;
 using Etch.OrchardCore.Blocks.ViewModels.Blocks;
 using System.Threading.Tasks;
 
@@ -13,8 +13,11 @@ namespace Etch.OrchardCore.Blocks.EditorJS.Parsers.Blocks
                 {
                     Alignment = block.Get("alignment", "center"),
                     Caption = block.Get("caption"),
+                    Profile = block.Get("profile"),
                     Stretched = block.Get("stretched", false),
-                    Url = GetMediaUrl(context, block)
+                    Url = GetMediaUrl(context, block),
+                    LinkUrl = block.Get("linkUrl"),
+                    LinkNewTab = block.Get("linkNewTab", false),
                 }
             );
         }

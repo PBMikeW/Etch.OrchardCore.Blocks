@@ -72,7 +72,7 @@ export default class LinkTool {
         this.nodes.editor.classList.add('link-tool-editor');
 
         this.nodes.input = document.createElement('input');
-        this.nodes.input.placeholder = 'Type link or search by title';
+        this.nodes.input.placeholder = 'Type link, search by title, or #anchor';
         this.nodes.input.classList.add(this.CSS.input);
         this.nodes.input.classList.add(this.CSS.inputShowed);
         this.nodes.input.addEventListener('keydown', event => {
@@ -89,9 +89,19 @@ export default class LinkTool {
                 return;
             }
 
-            if (this.nodes.input.value.length > 2) {
+            const value = this.nodes.input.value;
+
+            // When input starts with #, search for anchors in the current article
+            if (value.startsWith('#')) {
+                const query = value.substring(1).toLowerCase();
+                const anchors = _this._findAnchorsInEditors(query);
+                _this._displayAnchors(anchors);
+                return;
+            }
+
+            if (value.length > 2) {
                 fetch(
-                    `${this.config.tenantPath}/Blocks/SearchContentItems?type=${this.config.typeName}&part=${this.config.partName}&field=${this.config.fieldName}&query=${this.nodes.input.value}`
+                    `${this.config.tenantPath}/Blocks/SearchContentItems?type=${this.config.typeName}&part=${this.config.partName}&field=${this.config.fieldName}&query=${value}`
                 )
                     .then(response => response.json())
                     .then(contentItems =>
@@ -252,5 +262,83 @@ export default class LinkTool {
         } else {
             this.closeActions(false);
         }
+    }
+
+    /**
+     * Search all EditorJS instances on the page for blocks with anchor tunes.
+     * Returns an array of { anchor, blockType, text } objects matching the query.
+     */
+    _findAnchorsInEditors(query) {
+        const anchors = [];
+        const instances = window.__editorJSInstances;
+        if (!instances) return anchors;
+
+        Object.keys(instances).forEach(holderId => {
+            const entry = instances[holderId];
+            if (!entry || !entry.hiddenFieldId) return;
+
+            const hiddenField = document.getElementById(entry.hiddenFieldId);
+            if (!hiddenField || !hiddenField.value) return;
+
+            try {
+                const data = JSON.parse(hiddenField.value);
+                if (!data.blocks) return;
+
+                data.blocks.forEach(block => {
+                    const anchorValue = block.tunes?.anchorTune?.anchor;
+                    if (!anchorValue) return;
+
+                    if (!query || anchorValue.toLowerCase().includes(query)) {
+                        anchors.push({
+                            anchor: anchorValue,
+                            blockType: block.type,
+                            text: block.data?.text
+                                ? block.data.text.replace(/<[^>]+>/g, '').substring(0, 50)
+                                : block.type,
+                        });
+                    }
+                });
+            } catch (e) {
+                // Skip invalid JSON
+            }
+        });
+
+        return anchors;
+    }
+
+    /**
+     * Display anchor suggestions in the list.
+     */
+    _displayAnchors(anchors) {
+        this.nodes.list.innerHTML = '';
+
+        if (anchors.length === 0) {
+            const empty = document.createElement('li');
+            empty.classList.add('link-tool-editor__empty');
+            empty.textContent = 'No anchors found. Type # to search.';
+            this.nodes.list.appendChild(empty);
+            return;
+        }
+
+        const header = document.createElement('li');
+        header.classList.add('link-tool-editor__header');
+        header.textContent = 'Anchors in this article';
+        this.nodes.list.appendChild(header);
+
+        anchors.forEach(item => {
+            const button = document.createElement('button');
+            button.innerHTML = `<strong>#${item.anchor}</strong> <small>${item.text}</small>`;
+            button.setAttribute('data-href', `#${item.anchor}`);
+
+            const listItem = document.createElement('li');
+            listItem.title = `#${item.anchor}`;
+            listItem.appendChild(button);
+
+            button.addEventListener('click', event => {
+                this.selectContentItem(event);
+            });
+
+            this.nodes.list.appendChild(listItem);
+        });
     }
 }
