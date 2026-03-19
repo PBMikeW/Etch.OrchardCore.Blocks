@@ -1,7 +1,7 @@
 ﻿@{
     var tag = new TagBuilder("figure");
 
-    if (Model.Stretched)
+    if ((bool?)Model.Stretched == true)
     {
         tag.AddCssClass("align--wide");
     }
