@@ -16,6 +16,7 @@ import FontColorTool from './plugins/fontColor';
 import MediaLibrary from './plugins/mediaLibrary';
 import KbButton from './plugins/kbButton';
 import Breadcrumb from './plugins/breadcrumb';
+import { attachFormatPainter } from './plugins/formatPainter';
 
 window.initializeEditorJS = (
   tenantPath,
@@ -144,6 +145,11 @@ window.initializeEditorJS = (
     // use the Blocks API (insert, delete, move, update).
     if (!window.__editorJSInstances) window.__editorJSInstances = {};
     window.__editorJSInstances[id] = { editor, hiddenFieldId };
+
+    // Format painter: copy a block's type/heading-level and paint it onto others.
+    editor.isReady.then(() => {
+        attachFormatPainter(editor, document.getElementById(id));
+    });
 
     const onSubmit = (e) => {
         editor
