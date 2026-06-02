@@ -1,0 +1,35 @@
+.ce-format-painter-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  margin-left: 3px;
+  padding: 0;
+  border: 1px solid rgba(201, 201, 204, 0.48);
+  border-radius: 7px;
+  background-color: #fff;
+  box-shadow: 0 2px 3px rgba(0, 0, 0, 0.04);
+  color: #1d202b;
+  cursor: pointer;
+  user-select: none;
+  /* The toolbar actions row is pointer-events:none by default; real buttons
+     must re-enable it or they can't be clicked. */
+  pointer-events: auto;
+}
+
+.ce-format-painter-btn:hover {
+  background-color: #f8f8f8;
+}
+
+.ce-format-painter-btn--active {
+  background-color: #e7ebf1; /* PB Blue 200 */
+  border-color: #99acc4; /* PB Blue 300 */
+  color: #002d6a; /* PB Blue 500 */
+}
+
+/* Painting-mode cursor cue across the editor content. */
+.ce-format-painting .codex-editor__redactor,
+.ce-format-painting .ce-block {
+  cursor: crosshair;
+}
