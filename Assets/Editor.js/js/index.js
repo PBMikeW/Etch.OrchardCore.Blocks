@@ -17,6 +17,7 @@ import MediaLibrary from './plugins/mediaLibrary';
 import KbButton from './plugins/kbButton';
 import Breadcrumb from './plugins/breadcrumb';
 import { attachFormatPainter } from './plugins/formatPainter';
+import { attachUndo } from './plugins/crossWidgetUndo';
 
 window.initializeEditorJS = (
   tenantPath,
@@ -119,6 +120,8 @@ window.initializeEditorJS = (
         },
     };
 
+    const initialData = !$hiddenField.value ? {} : JSON.parse($hiddenField.value);
+
     const editor = new EditorJS({
         holder: id,
 
@@ -128,7 +131,7 @@ window.initializeEditorJS = (
 
         tunes: ['anchorTune'],
 
-        data: !$hiddenField.value ? {} : JSON.parse($hiddenField.value),
+        data: initialData,
 
         onChange: () => {
             editor
@@ -147,8 +150,11 @@ window.initializeEditorJS = (
     window.__editorJSInstances[id] = { editor, hiddenFieldId };
 
     // Format painter: copy a block's type/heading-level and paint it onto others.
+    // Cross-widget undo: a single Ctrl+Z/Y timeline across all editor instances.
     editor.isReady.then(() => {
-        attachFormatPainter(editor, document.getElementById(id));
+        const holderEl = document.getElementById(id);
+        attachFormatPainter(editor, holderEl);
+        attachUndo(editor, holderEl, initialData);
     });
 
     const onSubmit = (e) => {

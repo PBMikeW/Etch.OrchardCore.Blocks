@@ -48,6 +48,7 @@
         "bootstrap": "^5.3.3",
         "editorjs-anchor": "^1.0.0",
         "editorjs-text-color-plugin": "^2.0.4",
+        "editorjs-undo": "2.0.28",
         "jquery": "^3.7.1",
         "jquery-ui": "^1.13.2"
     }
