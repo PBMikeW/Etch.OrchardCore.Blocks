@@ -41,6 +41,8 @@ export default class MediaLibraryTool {
             alignment: data.alignment || 'center',
             profileObject: data.profileObject !== undefined ? data.profileObject : this.profiles[3],
             profile: data.profile !== undefined ? data.profile : this.profiles[3].name,
+            linkUrl: data.linkUrl || '',
+            linkNewTab: data.linkNewTab || false,
         };
 
     this.modalBodyElement = document.getElementById(
@@ -84,6 +86,45 @@ export default class MediaLibraryTool {
     }
 
     renderSettings() {
+        // -- Link settings section (URL + new tab checkbox) --
+        const linkSection = document.createElement('div');
+        linkSection.className = 'media-library-link-settings';
+
+        const linkLabel = document.createElement('label');
+        linkLabel.className = 'media-library-link-settings__label';
+        linkLabel.textContent = 'Link URL';
+
+        const linkInput = document.createElement('input');
+        linkInput.className = 'media-library-link-settings__input';
+        linkInput.type = 'url';
+        linkInput.value = this.data.linkUrl || '';
+        linkInput.placeholder = 'https://...';
+        linkInput.addEventListener('input', (e) => {
+            this.data.linkUrl = e.target.value;
+        });
+        // Prevent EditorJS from closing settings popover on Enter
+        linkInput.addEventListener('keydown', (e) => {
+            e.stopPropagation();
+        });
+
+        const newTabLabel = document.createElement('label');
+        newTabLabel.className = 'media-library-link-settings__checkbox';
+
+        const newTabCheckbox = document.createElement('input');
+        newTabCheckbox.type = 'checkbox';
+        newTabCheckbox.checked = this.data.linkNewTab || false;
+        newTabCheckbox.addEventListener('change', (e) => {
+            this.data.linkNewTab = e.target.checked;
+        });
+
+        newTabLabel.appendChild(newTabCheckbox);
+        newTabLabel.appendChild(document.createTextNode('Open in new tab'));
+
+        linkSection.appendChild(linkLabel);
+        linkSection.appendChild(linkInput);
+        linkSection.appendChild(newTabLabel);
+
+        // -- Action buttons (alignment, profile, stretch) --
         const alignments = [
             {
                 name: 'left',
@@ -126,7 +167,16 @@ export default class MediaLibraryTool {
             isActive: this.data.stretched === true,
         };
 
-        return [...alignmentActions, ...profileActions, stretchedAction];
+        return [
+            {
+                type: 'html',
+                element: linkSection,
+            },
+            { type: 'separator' },
+            ...alignmentActions,
+            ...profileActions,
+            stretchedAction,
+        ];
     }
 
     save() {
@@ -181,9 +231,28 @@ export default class MediaLibraryTool {
             alignment: this.data.alignment || 'center',
             profileObject: this.data.profileObject,
             profile: this.data.profileObject.name,
+            linkUrl: this.data.linkUrl || '',
+            linkNewTab: this.data.linkNewTab || false,
         };
 
         this.ui.render(this.data);
+    }
+
+    /**
+     * Manually saves editor state to the hidden field.
+     * Needed because custom HTML settings inputs are outside the editor
+     * content area, so EditorJS's MutationObserver doesn't detect changes.
+     */
+    _persistToHiddenField() {
+        const instance = window.__editorJSInstances?.[this.config.id];
+        if (instance?.editor) {
+            instance.editor.save().then((outputData) => {
+                const hiddenField = document.getElementById(instance.hiddenFieldId);
+                if (hiddenField) {
+                    hiddenField.value = JSON.stringify(outputData);
+                }
+            });
+        }
     }
 
     _toggleTune(tune) {

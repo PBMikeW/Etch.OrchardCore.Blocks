@@ -75,3 +75,40 @@
 .media-library-tool.align--right .media-library-item__caption {
     text-align: right;
 }
+
+/* Link settings in block settings popover */
+.media-library-link-settings {
+    padding: 6px 10px;
+    border-bottom: 1px solid #e8e8eb;
+}
+
+.media-library-link-settings__label {
+    font-size: 12px;
+    display: block;
+    margin-bottom: 4px;
+    color: #707684;
+}
+
+.media-library-link-settings__input {
+    width: 100%;
+    padding: 4px 8px;
+    border: 1px solid #e8e8eb;
+    border-radius: 4px;
+    font-size: 13px;
+    outline: none;
+    box-sizing: border-box;
+}
+
+.media-library-link-settings__input:focus {
+    border-color: #388ae5;
+}
+
+.media-library-link-settings__checkbox {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 6px;
+    font-size: 12px;
+    color: #707684;
+    cursor: pointer;
+}
