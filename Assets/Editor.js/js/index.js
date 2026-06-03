@@ -7,7 +7,9 @@ import Raw from '@editorjs/raw';
 import Quote from '@editorjs/quote';
 import Table from '@editorjs/table';
 import EditorJS from '@editorjs/editorjs';
-import AnchorTune from 'editorjs-anchor';
+import AnchorTune from './plugins/anchorTuneWrapper';
+import AlignmentTune from './plugins/alignmentTune';
+import PaddingTune from './plugins/paddingTune';
 import TextColor from 'editorjs-text-color-plugin';
 
 import LinkTool from './plugins/link';
@@ -41,9 +43,11 @@ window.initializeEditorJS = (
   }
 
     const baseTools = {
+        alignmentTune: AlignmentTune,
         anchorTune: {
             class: AnchorTune,
         },
+        paddingTune: PaddingTune,
         breadcrumb: Breadcrumb,
         Color: {
             class: TextColor,
@@ -129,7 +133,7 @@ window.initializeEditorJS = (
 
         tools: baseTools,
 
-        tunes: ['anchorTune'],
+        tunes: ['alignmentTune', 'anchorTune', 'paddingTune'],
 
         data: initialData,
 

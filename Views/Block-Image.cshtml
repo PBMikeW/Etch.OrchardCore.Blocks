@@ -9,10 +9,24 @@
     string alignment = Model.Alignment ?? "center";
     tag.AddCssClass($"align--{alignment}");
     tag.AddCssClass("figure");
+
+    if (Model.HasImageAnchor)
+    {
+        tag.Attributes["id"] = Model.ImageAnchor;
+    }
 }
 
 @tag.RenderStartTag()
-    <img src="@Model.Url" alt="@Model.Caption" />
+    @if (Model.HasLink)
+    {
+        <a href="@Model.LinkUrl"@(Model.LinkNewTab ? Html.Raw(" target=\"_blank\" rel=\"noopener\"") : null)>
+            <img src="@Model.Url" alt="@Model.Caption" />
+        </a>
+    }
+    else
+    {
+        <img src="@Model.Url" alt="@Model.Caption" />
+    }
 
     @if (Model.HasCaption)
     {

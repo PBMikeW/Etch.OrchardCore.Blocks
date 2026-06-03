@@ -1,5 +1,11 @@
-﻿@{ 
+﻿@{
     TagBuilder tag = Tag(Model, Model.Style == "unordered" ? "ul" : "ol");
+
+    string textAlignment = Model.TextAlignment;
+    if (textAlignment != null)
+    {
+        tag.MergeAttribute("style", $"text-align:{textAlignment}");
+    }
 }
 
 @tag.RenderStartTag()
