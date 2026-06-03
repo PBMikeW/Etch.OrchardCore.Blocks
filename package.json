@@ -24,7 +24,7 @@
         "@babel/preset-env": "^7.23.3",
         "@codexteam/icons": "^0.3.3",
         "@editorjs/delimiter": "^1.4.0",
-        "@editorjs/editorjs": "^2.28.2",
+        "@editorjs/editorjs": "^2.30.0",
         "@editorjs/embed": "^2.7.0",
         "@editorjs/header": "^2.8.1",
         "@editorjs/list": "^1.9.0",
