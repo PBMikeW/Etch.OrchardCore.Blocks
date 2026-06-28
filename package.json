@@ -1,4 +1,5 @@
 {
+    "name": "etch.orchardcore.blocks",
     "private": true,
     "sideEffects": ["**/*.css", "**/*.scss"],
     "scripts": {
