@@ -3,6 +3,12 @@
 @{
     TagBuilder tag = Tag(Model, $"h{Model.Level.ToString()}");
     tag.Attributes["id"] = SlugService.Slugify(Model.Text);
+
+    string textAlignment = Model.TextAlignment;
+    if (textAlignment != null)
+    {
+        tag.MergeAttribute("style", $"text-align:{textAlignment}");
+    }
 }
 
 @tag.RenderStartTag()

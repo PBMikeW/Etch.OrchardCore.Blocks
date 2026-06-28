@@ -1,10 +1,8 @@
-﻿using Etch.OrchardCore.Blocks.Fields;
+using Etch.OrchardCore.Blocks.Fields;
 using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.ContentTypes.Editors;
 using OrchardCore.DisplayManagement.Views;
 using System.Threading.Tasks;
-using System.Text.Json.Nodes;
-using OrchardCore.ContentFields.Fields;
 
 namespace Etch.OrchardCore.Blocks.Settings
 {
@@ -12,11 +10,11 @@ namespace Etch.OrchardCore.Blocks.Settings
     {
         public override IDisplayResult Edit(ContentPartFieldDefinition partFieldDefinition)
         {
-            return Initialize<BlockFieldSettings>("BlockFieldSettings_Edit", model =>
+            return Initialize<BlockFieldSettings>("BlockFieldSettings_Edit", settings =>
             {
-                var settings = partFieldDefinition.Settings.ToObject<BlockFieldSettings>();
-                model.LinkableContentTypes = settings.LinkableContentTypes;
-                model.Placeholder = settings.Placeholder;
+                var existing = partFieldDefinition.GetSettings<BlockFieldSettings>();
+                settings.LinkableContentTypes = existing.LinkableContentTypes;
+                settings.Placeholder = existing.Placeholder;
             }).Location("Content");
         }
 

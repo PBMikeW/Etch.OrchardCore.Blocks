@@ -1,4 +1,4 @@
-﻿using Etch.OrchardCore.Blocks.EditorJS.Parsers.Blocks;
+using Etch.OrchardCore.Blocks.EditorJS.Parsers.Blocks;
 using Etch.OrchardCore.Blocks.Parsers;
 using Fluid;
 using Fluid.Values;

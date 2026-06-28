@@ -1,8 +1,6 @@
-﻿@using Etch.OrchardCore.Blocks.ViewModels.Blocks;
 @using Microsoft.AspNetCore.Mvc.Rendering
 @using System.IO
 @using System.Text.Encodings.Web
-@inject OrchardCore.Modules.Services.ISlugService SlugService
 @{
     TagBuilder htmlTable = ConvertToHtmlTable(Model.Content, Model.WithHeadings);
 }
@@ -39,7 +37,7 @@
                 headerRow.InnerHtml.AppendHtml(th);
             }
             table.InnerHtml.AppendHtml(headerRow);
-            startRow = 1; // Start from the next row for the data
+            startRow = 1;
         }
 
         for (int i = startRow; i < data.Length; i++)
@@ -48,8 +46,8 @@
             foreach (var cell in data[i])
             {
                 var td = new TagBuilder("td");
-                td.InnerHtml.AppendHtml(cell); // Use AppendHtml to render HTML content correctly
-                td.Attributes.Add("style", "padding: 8px; text-align: left; border: 1px solid #ddd;"); // Added left and right borders
+                td.InnerHtml.AppendHtml(cell);
+                td.Attributes.Add("style", "padding: 8px; text-align: left; border: 1px solid #ddd;");
                 row.InnerHtml.AppendHtml(td);
             }
             table.InnerHtml.AppendHtml(row);
@@ -57,5 +55,4 @@
 
         return table;
     }
-
 }

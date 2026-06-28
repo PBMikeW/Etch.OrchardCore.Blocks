@@ -1,0 +1,16 @@
+@{
+    var columnCount = (int)Model.ColumnCount;
+    var columns = (IList<Etch.OrchardCore.Blocks.ViewModels.Blocks.ColumnsColumnViewModel>)Model.Columns;
+}
+
+<div class="columns-layout columns-layout--@columnCount" style="display: grid; grid-template-columns: repeat(@columnCount, 1fr); gap: 1rem;">
+    @foreach (var column in columns)
+    {
+        <div class="columns-layout__column">
+            @foreach (var block in column.Blocks)
+            {
+                @await DisplayAsync(block)
+            }
+        </div>
+    }
+</div>

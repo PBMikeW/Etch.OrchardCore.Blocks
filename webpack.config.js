@@ -1,3 +1,4 @@
+const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const path = require('path');
 const TerserPlugin = require('terser-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
@@ -25,7 +26,13 @@ module.exports = function webpackConfig(env, argv) {
                     },
                     {
                         test: /\.s?css$/,
-                        use: [isProduction ? MiniCssExtractPlugin.loader : 'style-loader', 'css-loader', 'sass-loader'],
+                        use: [
+                            isProduction
+                                ? MiniCssExtractPlugin.loader
+                                : 'style-loader',
+                            'css-loader',
+                            'sass-loader',
+                        ],
                     },
                 ],
             },
@@ -37,7 +44,13 @@ module.exports = function webpackConfig(env, argv) {
                 jquery: 'jQuery',
             },
             plugins: [
-                ...(isProduction ? [new MiniCssExtractPlugin({ filename: '../Styles/[name]/admin.css' })] : []),
+                ...(isProduction
+                    ? [
+                          new MiniCssExtractPlugin({
+                              filename: '../Styles/[name]/admin.css',
+                          }),
+                      ]
+                    : []),
             ],
             optimization: {
                 minimize: isProduction,
@@ -45,7 +58,10 @@ module.exports = function webpackConfig(env, argv) {
                     minimizer: [
                         new TerserPlugin({
                             terserOptions: {
-                                compress: { drop_console: true, drop_debugger: true },
+                                compress: {
+                                    drop_console: true,
+                                    drop_debugger: true,
+                                },
                                 output: { comments: false },
                             },
                             extractComments: false,
