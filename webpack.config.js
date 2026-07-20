@@ -26,9 +26,7 @@ module.exports = function webpackConfig(env, argv) {
                     {
                         test: /\.s?css$/,
                         use: [
-                            isProduction
-                                ? MiniCssExtractPlugin.loader
-                                : 'style-loader',
+                            MiniCssExtractPlugin.loader,
                             'css-loader',
                             'sass-loader',
                         ],
@@ -43,13 +41,9 @@ module.exports = function webpackConfig(env, argv) {
                 jquery: 'jQuery',
             },
             plugins: [
-                ...(isProduction
-                    ? [
-                          new MiniCssExtractPlugin({
-                              filename: '../Styles/[name]/admin.css',
-                          }),
-                      ]
-                    : []),
+                new MiniCssExtractPlugin({
+                    filename: '../Styles/[name]/admin.css',
+                }),
             ],
             optimization: {
                 minimize: isProduction,
