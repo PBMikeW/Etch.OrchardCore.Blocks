@@ -18,6 +18,7 @@ import FontColorTool from './plugins/fontColor';
 import MediaLibrary from './plugins/mediaLibrary';
 import KbButton from './plugins/kbButton';
 import Breadcrumb from './plugins/breadcrumb';
+import Underline from './plugins/underline';
 import { attachFormatPainter } from './plugins/formatPainter';
 import { attachUndo } from './plugins/crossWidgetUndo';
 
@@ -120,6 +121,7 @@ window.initializeEditorJS = (
                 cols: 3,
             },
         },
+        underline: Underline,
     };
 
     const initialData = !$hiddenField.value ? {} : JSON.parse($hiddenField.value);

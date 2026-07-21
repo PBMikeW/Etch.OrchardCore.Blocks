@@ -1,0 +1,50 @@
+.underline-actions {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 0 6px;
+}
+
+.underline-actions--active {
+    display: flex;
+}
+
+.underline-picker {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 1px solid #e8e8eb;
+    border-radius: 3px;
+    cursor: pointer;
+    background: transparent;
+}
+
+.underline-picker::-webkit-color-swatch-wrapper {
+    padding: 2px;
+}
+
+.underline-picker::-webkit-color-swatch {
+    border: none;
+    border-radius: 2px;
+}
+
+.underline-picker::-moz-color-swatch {
+    border: none;
+    border-radius: 2px;
+}
+
+.underline-reset {
+    height: 28px;
+    padding: 0 8px;
+    border: 1px solid #e8e8eb;
+    border-radius: 3px;
+    background: transparent;
+    cursor: pointer;
+    font-size: 12px;
+    color: #707684;
+}
+
+.underline-reset:hover {
+    background: #f3f4f6;
+}

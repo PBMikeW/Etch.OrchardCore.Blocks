@@ -15,7 +15,9 @@ export default class FontSizeTool {
       },
       b: true,
       i: true,
-      u: true,
+      u: {
+        style: true
+      },
       strong: true,
       em: true,
       a: true,
