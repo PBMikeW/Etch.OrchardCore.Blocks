@@ -52,6 +52,7 @@
         "editorjs-text-color-plugin": "^2.0.4",
         "editorjs-undo": "2.0.28",
         "jquery": "^3.7.1",
-        "jquery-ui": "^1.13.2"
+        "jquery-ui": "^1.13.2",
+        "@editorjs/editorjs": "2.31.6"
     }
 }
