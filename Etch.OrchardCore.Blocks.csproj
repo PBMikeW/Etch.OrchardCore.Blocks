@@ -33,7 +33,7 @@
     <PackageReference Include="OrchardCore.Module.Targets" Version="2.1.7" />
   </ItemGroup>
 
-  <ItemGroup>
+  <ItemGroup Condition="'$(UseOrchardCoreNuGet)' != 'true'">
     <ProjectReference Include="..\OrchardCore\src\OrchardCore.Modules\OrchardCore.Admin\OrchardCore.Admin.csproj" />
     <ProjectReference Include="..\OrchardCore\src\OrchardCore\OrchardCore.Autoroute.Core\OrchardCore.Autoroute.Core.csproj" />
     <ProjectReference Include="..\OrchardCore\src\OrchardCore\OrchardCore.ContentManagement\OrchardCore.ContentManagement.csproj" />
@@ -44,12 +44,23 @@
     <ProjectReference Include="..\OrchardCore\src\OrchardCore\OrchardCore.Media.Abstractions\OrchardCore.Media.Abstractions.csproj" />
     <ProjectReference Include="..\OrchardCore\src\OrchardCore\OrchardCore.ResourceManagement\OrchardCore.ResourceManagement.csproj" />
   </ItemGroup>
+  <ItemGroup Condition="'$(UseOrchardCoreNuGet)' == 'true'">
+    <PackageReference Include="OrchardCore.Admin" Version="$(OrchardCoreVersion)" />
+    <PackageReference Include="OrchardCore.Autoroute.Core" Version="$(OrchardCoreVersion)" />
+    <PackageReference Include="OrchardCore.ContentManagement" Version="$(OrchardCoreVersion)" />
+    <PackageReference Include="OrchardCore.ContentManagement.Display" Version="$(OrchardCoreVersion)" />
+    <PackageReference Include="OrchardCore.ContentTypes.Abstractions" Version="$(OrchardCoreVersion)" />
+    <PackageReference Include="OrchardCore.DisplayManagement" Version="$(OrchardCoreVersion)" />
+    <PackageReference Include="OrchardCore.Liquid.Abstractions" Version="$(OrchardCoreVersion)" />
+    <PackageReference Include="OrchardCore.Media.Abstractions" Version="$(OrchardCoreVersion)" />
+    <PackageReference Include="OrchardCore.ResourceManagement" Version="$(OrchardCoreVersion)" />
+  </ItemGroup>
 
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 
-  <Target Name="BuildStaticAssetsForRelease" BeforeTargets="BeforeBuild" Condition="'$(Configuration)' == 'Release'">
+  <Target Name="BuildStaticAssetsForRelease" BeforeTargets="BeforeBuild" Condition="'$(Configuration)' == 'Release' And '$(RunPnpmBuild)' != 'false'">
     <Exec Command="npm install" />
     <Exec Command="npm run build" />
   </Target>

@@ -1,3 +1,4 @@
+import '../css/index.scss';
 import Delimiter from '@editorjs/delimiter';
 import Embed from '@editorjs/embed';
 import Header from '@editorjs/header';

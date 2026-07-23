@@ -1,59 +1,72 @@
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const path = require('path');
+const TerserPlugin = require('terser-webpack-plugin');
 
-module.exports = {
-    entry: {
-        editorjs: './Assets/Editor.js/js/index',
-        styles: path.join(process.cwd(), 'Assets/Editor.js/css/index.scss'),
-    },
-    mode: 'development',
-    module: {
-        rules: [
-            {
-                test: /\.js$/,
-                exclude: /node_modules/,
-                use: {
-                    loader: 'babel-loader',
-                },
+module.exports = function webpackConfig(env, argv) {
+    const isProduction = argv.mode === 'production';
+
+    return [
+        {
+            mode: argv.mode || 'development',
+            entry: {
+                editorjs: './Assets/Editor.js/js/index',
             },
-            {
-                test: /\.css$/,
-                use: ['style-loader', 'css-loader'],
+            output: {
+                path: path.resolve(__dirname, './wwwroot/Scripts/'),
+                filename: '[name]/admin.js',
             },
-            {
-                test: /\.scss$/,
-                use: [
-                    MiniCssExtractPlugin.loader,
+            devtool: isProduction ? false : 'source-map',
+            module: {
+                rules: [
                     {
-                        loader: 'css-loader',
-                        options: {
-                            url: false,
-                        },
+                        test: /\.js$/,
+                        exclude: /node_modules/,
+                        use: { loader: 'babel-loader' },
                     },
                     {
-                        loader: 'postcss-loader',
-                        options: {
-                            postcssOptions: {
-                                plugins: [['autoprefixer']],
-                            },
-                        },
+                        test: /\.s?css$/,
+                        use: [
+                            MiniCssExtractPlugin.loader,
+                            'css-loader',
+                            'sass-loader',
+                        ],
                     },
-                    'sass-loader',
                 ],
             },
-        ],
-    },
-    externals: {
-        bootstrap: 'bootstrap',
-        jquery: 'jQuery',
-    },
-    output: {
-        filename: '[name]/admin.js',
-        path: path.resolve(__dirname, './wwwroot/Scripts/'),
-    },
-    plugins: [
-        new MiniCssExtractPlugin({
-            filename: '../Styles/editorjs/admin.css',
-        }),
-    ],
+            resolve: {
+                extensions: ['.js', '.jsx'],
+            },
+            externals: {
+                bootstrap: 'bootstrap',
+                jquery: 'jQuery',
+            },
+            plugins: [
+                new MiniCssExtractPlugin({
+                    filename: '../Styles/[name]/admin.css',
+                }),
+            ],
+            optimization: {
+                minimize: isProduction,
+                ...(isProduction && {
+                    minimizer: [
+                        new TerserPlugin({
+                            terserOptions: {
+                                compress: {
+                                    drop_console: true,
+                                    drop_debugger: true,
+                                },
+                                output: { comments: false },
+                            },
+                            extractComments: false,
+                        }),
+                    ],
+                }),
+            },
+            performance: {
+                hints: isProduction ? 'warning' : false,
+                maxEntrypointSize: 512000,
+                maxAssetSize: 512000,
+            },
+        },
+    ];
 };
