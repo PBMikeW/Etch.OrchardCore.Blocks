@@ -37,11 +37,9 @@ window.initializeEditorJS = (
     return;
   }
   
+  // No form on read-only pages (e.g. audit trail version preview) — still
+  // initialise the editor so the content is visible; just skip submit wiring.
   const $form = $hiddenField.closest('form');
-
-  if (!$form) {
-    return;
-  }
 
     const baseTools = {
         alignmentTune: AlignmentTune,
@@ -162,16 +160,18 @@ window.initializeEditorJS = (
         attachUndo(editor, holderEl, initialData);
     });
 
-    const onSubmit = (e) => {
-        editor
-            .save()
-            .then((outputData) => {
-                $hiddenField.value = JSON.stringify(outputData);
-                $form.removeEventListener('submit', onSubmit);
-                $form.submit();
-            })
-            .catch((error) => {});
-    };
+    if ($form) {
+        const onSubmit = (e) => {
+            editor
+                .save()
+                .then((outputData) => {
+                    $hiddenField.value = JSON.stringify(outputData);
+                    $form.removeEventListener('submit', onSubmit);
+                    $form.submit();
+                })
+                .catch((error) => {});
+        };
 
-    $form.addEventListener('submit', onSubmit);
+        $form.addEventListener('submit', onSubmit);
+    }
 };
