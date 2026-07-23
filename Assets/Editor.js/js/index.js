@@ -72,7 +72,16 @@ window.initializeEditorJS = (
         paddingTune: PaddingTune,
         breadcrumb: Breadcrumb,
         Color: {
-            class: withDefaultConfig(TextColor, colorToolConfig),
+            // Disable the A-button apply. editorjs routes an A-button click through
+            // surround() -> the plugin's wrap(), which does extractContents() +
+            // removeAllRanges() WITHOUT restoring the range, dropping the caret to
+            // the start of the block. Colour is applied via the swatch palette
+            // instead (its updateWrapper path re-adds the range and preserves the
+            // selection). No-op surround leaves the palette open on A-click but
+            // stops the caret jump. (Marker has no palette, so it keeps surround.)
+            class: class extends withDefaultConfig(TextColor, colorToolConfig) {
+                surround() {}
+            },
             config: colorToolConfig,
         },
         Marker: {
