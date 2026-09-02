@@ -6,9 +6,27 @@
     var targetAttr = Model.NewTab ? " target=\"_blank\" rel=\"noopener noreferrer\"" : "";
     var hasIcon = Model.HasIcon;
     var linkStyle = hasIcon ? " style=\"display: inline-flex; align-items: center; gap: 0.4rem;\"" : "";
+
+    bool inline = Model.Inline;
+    // Bootstrap spacer scale — must match SPACER_MAP in the paddingTune/kbButton editor plugins
+    var spacerMap = new Dictionary<string, string>
+    {
+        ["1"] = "0.25rem", ["2"] = "0.5rem", ["3"] = "1rem",
+        ["4"] = "1.5rem", ["5"] = "3rem", ["6"] = "4rem",
+        ["7"] = "5rem", ["8"] = "6rem", ["9"] = "7rem", ["10"] = "9rem"
+    };
+    string padLeft = spacerMap.TryGetValue((string)(Model.PaddingLeft ?? ""), out string leftVal) ? leftVal : null;
+    string padRight = spacerMap.TryGetValue((string)(Model.PaddingRight ?? ""), out string rightVal) ? rightVal : null;
+
+    // Inline buttons shrink-wrap and flow side by side; justification only applies to full-width rows
+    var wrapperStyle = inline
+        ? "display: inline-flex; vertical-align: top"
+        : $"display: flex; justify-content: {justify}";
+    if (padLeft != null) { wrapperStyle += $"; padding-left: {padLeft}"; }
+    if (padRight != null) { wrapperStyle += $"; padding-right: {padRight}"; }
 }
 
-<div style="display: flex; justify-content: @justify">
+<div style="@wrapperStyle">
     <a href="@Model.Url" class="@style"@Html.Raw(targetAttr)@Html.Raw(linkStyle)>@if (hasIcon && Model.IsIconLeft)
     {<span class="kb-button-icon kb-button-icon--left">@Html.Raw(Model.IconSvg)</span>}@label@if (hasIcon && !Model.IsIconLeft)
     {<span class="kb-button-icon kb-button-icon--right">@Html.Raw(Model.IconSvg)</span>}</a>

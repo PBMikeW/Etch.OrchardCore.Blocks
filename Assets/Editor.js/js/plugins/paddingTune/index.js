@@ -12,7 +12,7 @@ import './index.css';
  * preview matches the published page (WYSIWYG).
  */
 
-const SPACER_MAP = {
+export const SPACER_MAP = {
   '0': '0',
   '1': '0.25rem',
   '2': '0.5rem',

@@ -17,7 +17,10 @@ namespace Etch.OrchardCore.Blocks.EditorJS.Parsers.Blocks
                     Alignment = block.Get("alignment"),
                     IconSvg = block.Get("iconSvg"),
                     IconPosition = block.Get("iconPosition"),
-                    NewTab = block.Get<bool>("newTab", false)
+                    NewTab = block.Get<bool>("newTab", false),
+                    Inline = block.Get<bool>("inline", false),
+                    PaddingLeft = block.Get("paddingLeft"),
+                    PaddingRight = block.Get("paddingRight")
                 }
             );
         }

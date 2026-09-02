@@ -1,4 +1,5 @@
 import { make } from '../utils/dom';
+import { SPACER_MAP } from '../paddingTune';
 import HEROICONS from './heroicons-data';
 import './index.css';
 
@@ -58,6 +59,9 @@ export default class KbButton {
       iconSvg: data.iconSvg || '',
       iconPosition: data.iconPosition || 'left',
       newTab: data.newTab === true,
+      inline: data.inline === true,
+      paddingLeft: data.paddingLeft || '0',
+      paddingRight: data.paddingRight || '0',
     };
 
     this.wrapper = null;
@@ -106,6 +110,30 @@ export default class KbButton {
     newTabRow.appendChild(checkLabel);
     this.popover.appendChild(newTabRow);
 
+    // Inline checkbox — adjacent inline buttons flow side by side
+    const inlineRow = make('div', 'kb-button-tool__checkbox-row');
+    const inlineCheckbox = make('input', null, { type: 'checkbox' });
+    inlineCheckbox.checked = this.data.inline;
+    inlineCheckbox.addEventListener('change', (e) => {
+      this.data.inline = e.target.checked;
+      this._applyInline();
+    });
+    const inlineLabel = make('label');
+    inlineLabel.textContent = 'Inline (side by side)';
+    inlineLabel.addEventListener('click', () => inlineCheckbox.click());
+    inlineRow.appendChild(inlineCheckbox);
+    inlineRow.appendChild(inlineLabel);
+    this.popover.appendChild(inlineRow);
+
+    // Left/right spacing around the button (Bootstrap spacer scale, as paddingTune)
+    const spacingRow = make('div', 'kb-button-tool__field');
+    const spacingLabel = make('label');
+    spacingLabel.textContent = 'Space L/R';
+    spacingRow.appendChild(spacingLabel);
+    spacingRow.appendChild(this._createSpacingSelect('Space left', 'paddingLeft'));
+    spacingRow.appendChild(this._createSpacingSelect('Space right', 'paddingRight'));
+    this.popover.appendChild(spacingRow);
+
     this.wrapper.appendChild(this.popover);
 
     return this.wrapper;
@@ -151,6 +179,9 @@ export default class KbButton {
       iconSvg: this.data.iconSvg,
       iconPosition: this.data.iconPosition,
       newTab: this.data.newTab,
+      inline: this.data.inline,
+      paddingLeft: this.data.paddingLeft,
+      paddingRight: this.data.paddingRight,
     };
   }
 
@@ -222,6 +253,7 @@ export default class KbButton {
 
     this._updateButtonIcon();
     this._applyAlignment();
+    this._applyInline();
 
     this.wysiwygArea.appendChild(this.btnEl);
   }
@@ -262,6 +294,34 @@ export default class KbButton {
     if (!this.wysiwygArea) return;
     const map = { left: 'flex-start', center: 'center', right: 'flex-end' };
     this.wysiwygArea.style.justifyContent = map[this.data.alignment] || 'flex-start';
+  }
+
+  _applyInline() {
+    if (!this.wrapper) return;
+    this.wrapper.classList.toggle('kb-button-tool--inline', this.data.inline === true);
+    this._applySpacing();
+  }
+
+  _applySpacing() {
+    if (!this.wysiwygArea) return;
+    this.wysiwygArea.style.paddingLeft = SPACER_MAP[this.data.paddingLeft] || '';
+    this.wysiwygArea.style.paddingRight = SPACER_MAP[this.data.paddingRight] || '';
+  }
+
+  _createSpacingSelect(title, key) {
+    const select = make('select', 'kb-button-tool__spacing-select', { title });
+    Object.keys(SPACER_MAP).forEach((opt) => {
+      const option = make('option');
+      option.value = opt;
+      option.textContent = opt;
+      option.selected = this.data[key] === opt;
+      select.appendChild(option);
+    });
+    select.addEventListener('change', (e) => {
+      this.data[key] = e.target.value;
+      this._applySpacing();
+    });
+    return select;
   }
 
   // ── Fields ──────────────────────────────────────

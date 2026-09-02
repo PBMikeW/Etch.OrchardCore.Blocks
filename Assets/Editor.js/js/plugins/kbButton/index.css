@@ -247,3 +247,18 @@
   height: 14px;
   cursor: pointer;
 }
+
+/* ── Inline (side-by-side) ──────────────────── */
+/* Shrink-wrap the whole editor block so consecutive inline buttons sit
+   next to each other, matching the frontend rendering. */
+.ce-block:has(.kb-button-tool--inline) {
+  display: inline-block;
+  width: auto;
+  vertical-align: top;
+}
+.kb-button-tool--inline .kb-button-tool__wysiwyg {
+  display: inline-flex;
+}
+.kb-button-tool__spacing-select + .kb-button-tool__spacing-select {
+  margin-left: 6px;
+}

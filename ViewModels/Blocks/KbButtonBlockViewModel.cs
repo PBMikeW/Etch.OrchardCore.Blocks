@@ -9,6 +9,9 @@ namespace Etch.OrchardCore.Blocks.ViewModels.Blocks
         public string IconSvg { get; set; }
         public string IconPosition { get; set; }
         public bool NewTab { get; set; }
+        public bool Inline { get; set; }
+        public string PaddingLeft { get; set; }
+        public string PaddingRight { get; set; }
 
         public bool HasIcon => !string.IsNullOrEmpty(IconSvg) && IconPosition != "none";
         public bool IsIconLeft => IconPosition == "left" || string.IsNullOrEmpty(IconPosition);
