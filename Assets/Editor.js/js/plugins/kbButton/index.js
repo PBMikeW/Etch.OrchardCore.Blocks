@@ -41,7 +41,7 @@ const STYLE_ICONS = {
 export default class KbButton {
   static get toolbox() {
     return {
-      title: 'KB Button',
+      title: 'Button',
       icon: '<svg width="17" height="14" viewBox="0 0 17 14" xmlns="http://www.w3.org/2000/svg"><rect x="0.5" y="0.5" width="16" height="13" rx="3" stroke="currentColor" fill="none"/><text x="8.5" y="10" text-anchor="middle" font-size="8" fill="currentColor">btn</text></svg>',
     };
   }
