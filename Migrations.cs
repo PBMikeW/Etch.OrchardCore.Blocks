@@ -33,7 +33,7 @@ namespace Etch.OrchardCore.Blocks
             );
 
             // Skip to latest version on fresh installs
-            return 4;
+            return 5;
         }
 
         // Previously created Container content type - no longer needed but keeping
@@ -98,6 +98,23 @@ namespace Etch.OrchardCore.Blocks
             }
 
             return 4;
+        }
+
+        public async Task<int> UpdateFrom4Async()
+        {
+            // Give containers the same padding controls as ContentBlocks. The
+            // ContentBlockStyling part (PaddingTop/Bottom/Left/Right predefined
+            // lists) is a site-defined dynamic part shared with ContentBlock, so it
+            // is attached by name, not created here. Attaching is idempotent. The
+            // legacy Container.Nopadding field stays in place - themes fall back to
+            // it until a page is resaved with explicit padding.
+            await _contentDefinitionManager.AlterTypeDefinitionAsync("Container", type => type
+                .WithPart("ContentBlockStyling", part => part
+                    .WithPosition("2")
+                )
+            );
+
+            return 5;
         }
     }
 }
