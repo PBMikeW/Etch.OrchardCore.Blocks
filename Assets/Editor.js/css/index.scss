@@ -4,3 +4,26 @@
 
 @import "editor.js/codex-editor/index";
 @import "editor.js/block/index";
+/**
+ * Editor-only readability: light text colours from the colour tool's palette
+ * (white, near-whites, yellow) are invisible on the light admin canvas — the
+ * published page usually gives them a dark background. Paint a navy chip
+ * behind them in the editor so they can be seen and edited. The colour tool
+ * writes style.color, which browsers serialize to rgb() in the attribute;
+ * hex forms are kept for any legacy data. Marker (background) highlights are
+ * unaffected: their inline background-color beats this rule.
+ */
+.codex-editor font[style*="rgb(255, 255, 255)"],
+.codex-editor font[style*="rgb(248, 248, 248)"],
+.codex-editor font[style*="rgb(209, 209, 209)"],
+.codex-editor font[style*="rgb(255, 205, 0)"],
+.codex-editor font[style*="#fff" i],
+.codex-editor font[style*="#f8f8f8" i],
+.codex-editor font[style*="#d1d1d1" i],
+.codex-editor font[style*="#ffcd00" i] {
+  background-color: rgba(0, 45, 106, 0.85);
+  border-radius: 2px;
+  padding: 0 3px;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
