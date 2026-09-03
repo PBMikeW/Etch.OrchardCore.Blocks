@@ -1,11 +1,6 @@
 @model Etch.OrchardCore.Blocks.ViewModels.DisplayBlockBodyPartViewModel
 @{
-    var spacerMap = new Dictionary<string, string>
-    {
-        ["1"] = "0.25rem", ["2"] = "0.5rem", ["3"] = "1rem",
-        ["4"] = "1.5rem", ["5"] = "3rem", ["6"] = "4rem",
-        ["7"] = "5rem", ["8"] = "6rem", ["9"] = "7rem", ["10"] = "9rem"
-    };
+    var spacerMap = SpacerScale.Map;
 }
 <section class="section">
     <div class="section__content constrain">

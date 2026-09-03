@@ -97,33 +97,15 @@ export default class KbButton {
     this.popover.appendChild(iconRow);
 
     // New tab checkbox
-    const newTabRow = make('div', 'kb-button-tool__checkbox-row');
-    const checkbox = make('input', null, { type: 'checkbox' });
-    checkbox.checked = this.data.newTab;
-    checkbox.addEventListener('change', (e) => {
-      this.data.newTab = e.target.checked;
-    });
-    const checkLabel = make('label');
-    checkLabel.textContent = 'Open in new tab';
-    checkLabel.addEventListener('click', () => checkbox.click());
-    newTabRow.appendChild(checkbox);
-    newTabRow.appendChild(checkLabel);
-    this.popover.appendChild(newTabRow);
+    this.popover.appendChild(this._createCheckboxRow('Open in new tab', this.data.newTab, (checked) => {
+      this.data.newTab = checked;
+    }));
 
     // Inline checkbox — adjacent inline buttons flow side by side
-    const inlineRow = make('div', 'kb-button-tool__checkbox-row');
-    const inlineCheckbox = make('input', null, { type: 'checkbox' });
-    inlineCheckbox.checked = this.data.inline;
-    inlineCheckbox.addEventListener('change', (e) => {
-      this.data.inline = e.target.checked;
+    this.popover.appendChild(this._createCheckboxRow('Inline (side by side)', this.data.inline, (checked) => {
+      this.data.inline = checked;
       this._applyInline();
-    });
-    const inlineLabel = make('label');
-    inlineLabel.textContent = 'Inline (side by side)';
-    inlineLabel.addEventListener('click', () => inlineCheckbox.click());
-    inlineRow.appendChild(inlineCheckbox);
-    inlineRow.appendChild(inlineLabel);
-    this.popover.appendChild(inlineRow);
+    }));
 
     // Left/right spacing around the button (Bootstrap spacer scale, as paddingTune)
     const spacingRow = make('div', 'kb-button-tool__field');
@@ -304,8 +286,24 @@ export default class KbButton {
 
   _applySpacing() {
     if (!this.wysiwygArea) return;
-    this.wysiwygArea.style.paddingLeft = SPACER_MAP[this.data.paddingLeft] || '';
-    this.wysiwygArea.style.paddingRight = SPACER_MAP[this.data.paddingRight] || '';
+    // '0'/unset must clear the inline style (empty string), not write '0' —
+    // writing padding-left: 0 would override the area's base 12px inset.
+    const spacing = (key) => (key && key !== '0' && SPACER_MAP[key]) || '';
+    this.wysiwygArea.style.paddingLeft = spacing(this.data.paddingLeft);
+    this.wysiwygArea.style.paddingRight = spacing(this.data.paddingRight);
+  }
+
+  _createCheckboxRow(labelText, checked, onChange) {
+    const row = make('div', 'kb-button-tool__checkbox-row');
+    const checkbox = make('input', null, { type: 'checkbox' });
+    checkbox.checked = checked;
+    checkbox.addEventListener('change', (e) => onChange(e.target.checked));
+    const label = make('label');
+    label.textContent = labelText;
+    label.addEventListener('click', () => checkbox.click());
+    row.appendChild(checkbox);
+    row.appendChild(label);
+    return row;
   }
 
   _createSpacingSelect(title, key) {
