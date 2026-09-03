@@ -4,26 +4,38 @@
 
 @import "editor.js/codex-editor/index";
 @import "editor.js/block/index";
+
 /**
- * Editor-only readability: light text colours from the colour tool's palette
- * (white, near-whites, yellow) are invisible on the light admin canvas — the
- * published page usually gives them a dark background. Paint a navy chip
- * behind them in the editor so they can be seen and edited. The colour tool
- * writes style.color, which browsers serialize to rgb() in the attribute;
- * hex forms are kept for any legacy data. Marker (background) highlights are
- * unaffected: their inline background-color beats this rule.
+ * Editor-only readability: light text colours (white, near-whites, yellow)
+ * are invisible on the light admin canvas - the published page usually gives
+ * them a dark background. Paint a light grey chip behind them in the editor.
+ * Selectors cover the colour tool output plus pasted/legacy inline styles
+ * (rgb, hex, keyword; 6-digit hex contains the 3-digit substring) on any
+ * element. Elements with their own inline background (marker highlights)
+ * are unaffected: inline styles beat this rule. Dark admin theme needs no
+ * chip - the canvas is dark, so light text reads natively.
  */
-.codex-editor font[style*="rgb(255, 255, 255)"],
-.codex-editor font[style*="rgb(248, 248, 248)"],
-.codex-editor font[style*="rgb(209, 209, 209)"],
-.codex-editor font[style*="rgb(255, 205, 0)"],
-.codex-editor font[style*="#fff" i],
-.codex-editor font[style*="#f8f8f8" i],
-.codex-editor font[style*="#d1d1d1" i],
-.codex-editor font[style*="#ffcd00" i] {
-  background-color: rgba(0, 45, 106, 0.85);
-  border-radius: 2px;
-  padding: 0 3px;
-  -webkit-box-decoration-break: clone;
-  box-decoration-break: clone;
+html:not([data-bs-theme='dark']) {
+  .codex-editor [style*='color: rgb(255, 255, 255)' i],
+  .codex-editor [style*='color:#fff' i],
+  .codex-editor [style*='color: #fff' i],
+  .codex-editor [style*='color:white' i],
+  .codex-editor [style*='color: white' i],
+  .codex-editor [style*='color: rgb(248, 248, 248)' i],
+  .codex-editor [style*='color:#f8f8f8' i],
+  .codex-editor [style*='color: #f8f8f8' i],
+  .codex-editor [style*='color: rgb(209, 209, 209)' i],
+  .codex-editor [style*='color:#d1d1d1' i],
+  .codex-editor [style*='color: #d1d1d1' i],
+  .codex-editor [style*='color: rgb(255, 205, 0)' i],
+  .codex-editor [style*='color:#ffcd00' i],
+  .codex-editor [style*='color: #ffcd00' i],
+  .codex-editor font[color='#fff' i],
+  .codex-editor font[color='#ffffff' i] {
+    background-color: rgba(0, 0, 0, 0.28);
+    border-radius: 2px;
+    padding: 0 3px;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+  }
 }
