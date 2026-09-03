@@ -131,7 +131,7 @@ namespace Etch.OrchardCore.Blocks.EditorJS.Parsers
                         shape.TextAlignment = alignment;
                     }
 
-                    var (paddingTop, paddingBottom) = block.GetPadding();
+                    var (paddingTop, paddingBottom, paddingLeft, paddingRight) = block.GetPadding();
                     if (!string.IsNullOrEmpty(paddingTop))
                     {
                         shape.PaddingTop = paddingTop;
@@ -139,6 +139,14 @@ namespace Etch.OrchardCore.Blocks.EditorJS.Parsers
                     if (!string.IsNullOrEmpty(paddingBottom))
                     {
                         shape.PaddingBottom = paddingBottom;
+                    }
+                    if (!string.IsNullOrEmpty(paddingLeft))
+                    {
+                        shape.PaddingLeft = paddingLeft;
+                    }
+                    if (!string.IsNullOrEmpty(paddingRight))
+                    {
+                        shape.PaddingRight = paddingRight;
                     }
 
                     shapes.Add(shape);

@@ -39,25 +39,27 @@ export default class PaddingTune {
     this.data = data || {};
     this.paddingTop = this.data.paddingTop || '0';
     this.paddingBottom = this.data.paddingBottom || '0';
+    this.paddingLeft = this.data.paddingLeft || '0';
+    this.paddingRight = this.data.paddingRight || '0';
   }
 
   render() {
     const wrapper = document.createElement('div');
     wrapper.classList.add('padding-tune');
 
-    // Padding top row
-    const topRow = this._createRow('Top', this.paddingTop, (val) => {
-      this.paddingTop = val;
-      this._applyPadding();
-    });
-    wrapper.appendChild(topRow);
+    const rows = [
+      ['Top', 'paddingTop'],
+      ['Bottom', 'paddingBottom'],
+      ['Left', 'paddingLeft'],
+      ['Right', 'paddingRight'],
+    ];
 
-    // Padding bottom row
-    const bottomRow = this._createRow('Bottom', this.paddingBottom, (val) => {
-      this.paddingBottom = val;
-      this._applyPadding();
+    rows.forEach(([label, key]) => {
+      wrapper.appendChild(this._createRow(label, this[key], (val) => {
+        this[key] = val;
+        this._applyPadding();
+      }));
     });
-    wrapper.appendChild(bottomRow);
 
     return wrapper;
   }
@@ -97,27 +99,31 @@ export default class PaddingTune {
     if (content) {
       content.style.paddingTop = SPACER_MAP[this.paddingTop] || '0';
       content.style.paddingBottom = SPACER_MAP[this.paddingBottom] || '0';
+      content.style.paddingLeft = SPACER_MAP[this.paddingLeft] || '';
+      content.style.paddingRight = SPACER_MAP[this.paddingRight] || '';
     }
   }
 
   wrap(blockContent) {
-    if (this.paddingTop && this.paddingTop !== '0') {
-      blockContent.style.paddingTop = SPACER_MAP[this.paddingTop] || '0';
-    }
-    if (this.paddingBottom && this.paddingBottom !== '0') {
-      blockContent.style.paddingBottom = SPACER_MAP[this.paddingBottom] || '0';
-    }
+    ['paddingTop', 'paddingBottom', 'paddingLeft', 'paddingRight'].forEach((key) => {
+      if (this[key] && this[key] !== '0') {
+        blockContent.style[key] = SPACER_MAP[this[key]] || '0';
+      }
+    });
     return blockContent;
   }
 
   save() {
-    if ((!this.paddingTop || this.paddingTop === '0') &&
-        (!this.paddingBottom || this.paddingBottom === '0')) {
+    const zero = (v) => !v || v === '0';
+    if (zero(this.paddingTop) && zero(this.paddingBottom) &&
+        zero(this.paddingLeft) && zero(this.paddingRight)) {
       return undefined;
     }
     return {
       paddingTop: this.paddingTop,
       paddingBottom: this.paddingBottom,
+      paddingLeft: this.paddingLeft,
+      paddingRight: this.paddingRight,
     };
   }
 }

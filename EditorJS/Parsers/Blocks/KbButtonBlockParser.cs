@@ -8,7 +8,7 @@ namespace Etch.OrchardCore.Blocks.EditorJS.Parsers.Blocks
     {
         public async Task<dynamic> RenderAsync(BlockParserContext context, Block block)
         {
-            return await context.ShapeFactory.New.Block__KbButton(
+            var shape = await context.ShapeFactory.New.Block__KbButton(
                 new KbButtonBlockViewModel
                 {
                     Url = block.Get("url"),
@@ -18,11 +18,16 @@ namespace Etch.OrchardCore.Blocks.EditorJS.Parsers.Blocks
                     IconSvg = block.Get("iconSvg"),
                     IconPosition = block.Get("iconPosition"),
                     NewTab = block.Get<bool>("newTab", false),
-                    Inline = block.Get<bool>("inline", false),
-                    PaddingLeft = block.Get("paddingLeft"),
-                    PaddingRight = block.Get("paddingRight")
+                    Inline = block.Get<bool>("inline", false)
                 }
             );
+
+            // The button renders padding and anchor on its own wrapper so inline
+            // buttons keep flowing side by side — the generic block wrapper in
+            // BlockField/BlockBodyPart must not wrap it in a block-level div.
+            shape.SelfPadded = true;
+
+            return shape;
         }
     }
 }

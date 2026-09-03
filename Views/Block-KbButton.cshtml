@@ -8,20 +8,28 @@
     var linkStyle = hasIcon ? " style=\"display: inline-flex; align-items: center; gap: 0.4rem;\"" : "";
 
     bool inline = Model.Inline;
-    string padLeftKey = Model.PaddingLeft ?? "";
-    string padRightKey = Model.PaddingRight ?? "";
-    string padLeft = SpacerScale.Map.TryGetValue(padLeftKey, out string leftVal) ? leftVal : null;
-    string padRight = SpacerScale.Map.TryGetValue(padRightKey, out string rightVal) ? rightVal : null;
+
+    // Padding comes from the block's padding tune; rendered on this wrapper
+    // (SelfPadded) so inline buttons keep flowing side by side.
+    string Pad(object key) => key is string k && SpacerScale.Map.TryGetValue(k, out string v) ? v : null;
+    string padTop = Pad(Model.PaddingTop);
+    string padBottom = Pad(Model.PaddingBottom);
+    string padLeft = Pad(Model.PaddingLeft);
+    string padRight = Pad(Model.PaddingRight);
 
     // Inline buttons shrink-wrap and flow side by side; justification only applies to full-width rows
     var wrapperStyle = inline
         ? "display: inline-flex; vertical-align: top"
         : $"display: flex; justify-content: {justify}";
+    if (padTop != null) { wrapperStyle += $"; padding-top: {padTop}"; }
+    if (padBottom != null) { wrapperStyle += $"; padding-bottom: {padBottom}"; }
     if (padLeft != null) { wrapperStyle += $"; padding-left: {padLeft}"; }
     if (padRight != null) { wrapperStyle += $"; padding-right: {padRight}"; }
+
+    string anchor = Model.Anchor as string;
 }
 
-<div style="@wrapperStyle">
+<div style="@wrapperStyle"@(string.IsNullOrEmpty(anchor) ? null : Html.Raw($" id=\"{anchor}\""))>
     <a href="@Model.Url" class="@style"@Html.Raw(targetAttr)@Html.Raw(linkStyle)>@if (hasIcon && Model.IsIconLeft)
     {<span class="kb-button-icon kb-button-icon--left">@Html.Raw(Model.IconSvg)</span>}@label@if (hasIcon && !Model.IsIconLeft)
     {<span class="kb-button-icon kb-button-icon--right">@Html.Raw(Model.IconSvg)</span>}</a>

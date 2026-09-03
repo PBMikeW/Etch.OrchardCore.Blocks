@@ -1,27 +1,37 @@
 @model Etch.OrchardCore.Blocks.ViewModels.DisplayBlockBodyPartViewModel
 @{
     var spacerMap = SpacerScale.Map;
+
+    string PaddingStyle(dynamic block)
+    {
+        var parts = new List<string>();
+        void Add(string css, object key)
+        {
+            if (key is string k && spacerMap.TryGetValue(k, out var v))
+            {
+                parts.Add($"{css}:{v}");
+            }
+        }
+        Add("padding-top", (object)block.PaddingTop);
+        Add("padding-bottom", (object)block.PaddingBottom);
+        Add("padding-left", (object)block.PaddingLeft);
+        Add("padding-right", (object)block.PaddingRight);
+        return parts.Count > 0 ? string.Join(";", parts) : null;
+    }
 }
 <section class="section">
     <div class="section__content constrain">
         @foreach (var block in Model.Blocks)
         {
-            string paddingTop = block.PaddingTop;
-            string paddingBottom = block.PaddingBottom;
-            var paddingParts = new List<string>();
-            if (!string.IsNullOrEmpty(paddingTop) && spacerMap.TryGetValue(paddingTop, out var topVal))
-            {
-                paddingParts.Add($"padding-top:{topVal}");
-            }
-            if (!string.IsNullOrEmpty(paddingBottom) && spacerMap.TryGetValue(paddingBottom, out var bottomVal))
-            {
-                paddingParts.Add($"padding-bottom:{bottomVal}");
-            }
-            string paddingStyle = paddingParts.Count > 0 ? string.Join(";", paddingParts) : null;
+            @* Blocks that render their own padding/anchor (e.g. inline KB buttons)
+               must not get a block-level wrapper div. *@
+            bool selfPadded = block.SelfPadded == true;
+            string paddingStyle = selfPadded ? null : PaddingStyle(block);
+            string anchor = selfPadded ? null : block.Anchor as string;
 
-            if (!string.IsNullOrEmpty(block.Anchor) || paddingStyle != null)
+            if (!string.IsNullOrEmpty(anchor) || paddingStyle != null)
             {
-                <div@(block.Anchor != null ? Html.Raw($" id=\"{block.Anchor}\"") : null)@(paddingStyle != null ? Html.Raw($" style=\"{paddingStyle}\"") : null)>
+                <div@(!string.IsNullOrEmpty(anchor) ? Html.Raw($" id=\"{anchor}\"") : null)@(paddingStyle != null ? Html.Raw($" style=\"{paddingStyle}\"") : null)>
                     @await DisplayAsync(block)
                 </div>
             }

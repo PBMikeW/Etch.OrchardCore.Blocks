@@ -72,26 +72,26 @@ namespace Etch.OrchardCore.Blocks.EditorJS.Parsers.Models
             return null;
         }
 
-        public (string PaddingTop, string PaddingBottom) GetPadding()
+        public (string PaddingTop, string PaddingBottom, string PaddingLeft, string PaddingRight) GetPadding()
         {
             if (Tunes == null || !Tunes.ContainsKey("paddingTune"))
             {
-                return (null, null);
+                return (null, null, null, null);
             }
 
             var paddingTune = Tunes["paddingTune"];
             if (paddingTune is JObject jo)
             {
-                var top = jo.TryGetValue("paddingTop", out var pt) ? pt.ToString() : null;
-                var bottom = jo.TryGetValue("paddingBottom", out var pb) ? pb.ToString() : null;
+                string Value(string key)
+                {
+                    var value = jo.TryGetValue(key, out var token) ? token.ToString() : null;
+                    return value == "0" ? null : value;
+                }
 
-                if (top == "0") top = null;
-                if (bottom == "0") bottom = null;
-
-                return (top, bottom);
+                return (Value("paddingTop"), Value("paddingBottom"), Value("paddingLeft"), Value("paddingRight"));
             }
 
-            return (null, null);
+            return (null, null, null, null);
         }
     }
 }
