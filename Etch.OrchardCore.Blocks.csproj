@@ -30,7 +30,7 @@
 
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.*" />
-    <PackageReference Include="OrchardCore.Module.Targets" Version="2.1.7" />
+    <PackageReference Include="OrchardCore.Module.Targets" Version="$(OrchardCoreVersion)" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(UseOrchardCoreNuGet)' != 'true'">
