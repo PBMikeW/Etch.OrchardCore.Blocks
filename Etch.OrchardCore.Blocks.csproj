@@ -1,7 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk.Razor">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <!--
+      Shared with the PropertyBrokers portal repo. The parent repo's
+      Directory.Build.props supplies these; the defaults below keep the portal
+      (net8.0 / OrchardCore 2.2.1) and standalone builds working unchanged.
+    -->
+    <PbTargetFramework Condition="'$(PbTargetFramework)' == ''">net8.0</PbTargetFramework>
+    <OrchardCoreVersion Condition="'$(OrchardCoreVersion)' == ''">2.2.1</OrchardCoreVersion>
+    <TargetFramework>$(PbTargetFramework)</TargetFramework>
     <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <Version>$(VersionNumber)</Version>
