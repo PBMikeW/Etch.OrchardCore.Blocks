@@ -52,8 +52,14 @@ namespace Etch.OrchardCore.Blocks.Drivers
             });
         }
 
+#if NET10_0_OR_GREATER
+        public override async Task<IDisplayResult> UpdateAsync(BlockField field, UpdateFieldEditorContext context)
+        {
+            var updater = context.Updater;
+#else
         public override async Task<IDisplayResult> UpdateAsync(BlockField field, IUpdateModel updater, UpdateFieldEditorContext context)
         {
+#endif
             await updater.TryUpdateModelAsync(field, Prefix, f => f.Data);
 
             return Edit(field, context);
