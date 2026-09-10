@@ -1,0 +1,14 @@
+@{
+    // Consecutive inline buttons share one wrapping flex row. The gap does the
+    // spacing (the buttons drop their own right margin inside a row), so a row
+    // that wraps on a narrow screen keeps whole buttons with even gaps, and
+    // centre / right alignment applies to the row rather than each button.
+    var alignment = !string.IsNullOrEmpty(Model.Alignment) ? Model.Alignment : "left";
+    var justify = alignment == "center" ? "center" : alignment == "right" ? "flex-end" : "flex-start";
+}
+<div class="kb-button-row" style="display: flex; flex-wrap: wrap; align-items: flex-start; gap: 0.6rem 0.7rem; justify-content: @justify">
+    @foreach (var button in Model.Buttons)
+    {
+        @await DisplayAsync(button)
+    }
+</div>

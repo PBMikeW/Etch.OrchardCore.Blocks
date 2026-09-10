@@ -10,19 +10,22 @@
   padding: 12px;
 }
 
-/* Button replica */
+/* Button replica. Metrics follow the site theme's .stdbutton at desktop widths
+   (padding 0.6rem 1.3rem, 0.9rem text, 0.3rem radius, no label wrapping) so the
+   canvas shows the button at its published size. */
 .kb-button-tool__btn {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  padding: 0.5rem 1.2rem;
+  padding: 0.6rem 1.3rem;
   border-radius: 0.3rem;
   font-family: 'Catamaran', sans-serif;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   text-decoration: none;
   cursor: pointer;
   user-select: text;
-  line-height: 1.4;
+  line-height: 1.5;
+  white-space: nowrap;
 }
 
 /* ── Simplified style replicas (editor only) ── */
@@ -249,15 +252,22 @@
 }
 
 /* ── Inline (side-by-side) ──────────────────── */
-/* Shrink-wrap the whole editor block so consecutive inline buttons sit
-   next to each other, matching the frontend rendering. */
+/* Shrink-wrap the whole editor block so consecutive inline buttons sit next
+   to each other. The published page lays them out as one flex row with a
+   0.7rem gap and no extra padding (Block-KbButtonGroup), so the editor block
+   drops the replica's side padding and carries the same gap as a margin. */
 .ce-block:has(.kb-button-tool--inline) {
   display: inline-block;
   width: auto;
   vertical-align: top;
+  margin-right: 0.7rem;
+}
+.kb-button-tool--inline {
+  padding: 4px 0;
 }
 .kb-button-tool--inline .kb-button-tool__wysiwyg {
   display: inline-flex;
+  padding: 0;
 }
 .kb-button-tool__spacing-select + .kb-button-tool__spacing-select {
   margin-left: 6px;
