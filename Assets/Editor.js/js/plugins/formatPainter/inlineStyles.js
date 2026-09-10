@@ -12,9 +12,16 @@
  * whole text in the same markup the tool itself produces, so the tool's picker
  * still recognises and edits it afterwards.
  *
+ * Content saved by earlier editor versions uses <font color="#hex"> and
+ * editor-fs-* size classes instead (see ../utils/legacyMarkup.js). Both helpers
+ * upgrade that markup first, so a legacy block copies and paints like a
+ * current one, and a painted target comes out in current markup.
+ *
  * Pure string -> string helpers over a throwaway DOM; no editor dependency, so
  * they can be unit-tested outside the browser (pass the document explicitly).
  */
+
+import { upgradeLegacyMarkup } from '../utils/legacyMarkup';
 
 const TEXT_NODE = 3;
 const ELEMENT_NODE = 1;
@@ -68,12 +75,14 @@ function effectiveValue(textNode, prop, root) {
  *
  * @param {string[]} htmlFragments
  * @param {Document} doc
+ * @param {string} blockTag  tag the block's text renders in ('p', 'li', 'h1'..'h6');
+ *                           decides what a legacy size class resolved to
  * @returns {{ color?: string, backgroundColor?: string, fontSize?: string }}
  */
-export function extractWholeBlockStyles(htmlFragments, doc = document) {
+export function extractWholeBlockStyles(htmlFragments, doc = document, blockTag = 'p') {
   const nodes = [];
   htmlFragments.forEach((html) => {
-    const root = parse(html, doc);
+    const root = parse(upgradeLegacyMarkup(html, blockTag, doc), doc);
     collectTextNodes(root, []).forEach((node) => nodes.push({ node, root }));
   });
 
@@ -146,20 +155,23 @@ function stripProperty(root, prop) {
  * Re-wrap a block's text so every character carries the given styles, exactly
  * as the inline tools would have written them. Properties absent from `styles`
  * are left untouched; blank content is returned as-is (no empty wrappers).
+ * Legacy markup in the target is upgraded on the way, whatever is painted.
  *
  * @param {string} html
  * @param {{ color?: string, backgroundColor?: string, fontSize?: string }} styles
  * @param {Document} doc
+ * @param {string} blockTag  see extractWholeBlockStyles
  * @returns {string}
  */
-export function applyWholeBlockStyles(html, styles, doc = document) {
+export function applyWholeBlockStyles(html, styles, doc = document, blockTag = 'p') {
+  const upgraded = upgradeLegacyMarkup(html, blockTag, doc) || '';
   const wrappers = WRAPPERS.filter(({ prop }) => styles[prop]);
   if (!wrappers.length) {
-    return html || '';
+    return upgraded;
   }
-  const root = parse(html, doc);
+  const root = parse(upgraded, doc);
   if (!collectTextNodes(root, []).length) {
-    return html || '';
+    return upgraded;
   }
 
   wrappers.forEach(({ prop }) => stripProperty(root, prop));
