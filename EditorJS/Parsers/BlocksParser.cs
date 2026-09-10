@@ -1,4 +1,6 @@
 using Etch.OrchardCore.Blocks.EditorJS.Parsers.Blocks;
+using Etch.OrchardCore.Blocks.ViewModels.Blocks;
+using Microsoft.CSharp.RuntimeBinder;
 using Etch.OrchardCore.Blocks.EditorJS.Parsers.Models;
 using Etch.OrchardCore.Blocks.Fields;
 using Etch.OrchardCore.Blocks.Models;
@@ -157,7 +159,74 @@ namespace Etch.OrchardCore.Blocks.EditorJS.Parsers
                 }
             }
 
-            return shapes;
+            return await GroupInlineButtonsAsync(context, shapes);
+        }
+
+        /// <summary>
+        /// Wraps each run of consecutive inline KB buttons in a Block__KbButtonGroup
+        /// shape: one flex row that wraps whole buttons with an even gap and aligns
+        /// the row as the first button asks. Rendering them as loose inline-flex
+        /// siblings let a narrow screen squeeze the row and break the labels inside
+        /// the buttons instead.
+        /// </summary>
+        private static async Task<IList<dynamic>> GroupInlineButtonsAsync(BlockParserContext context, IList<dynamic> shapes)
+        {
+            var result = new List<dynamic>(shapes.Count);
+            var run = new List<dynamic>();
+
+            async Task FlushAsync()
+            {
+                if (run.Count == 0)
+                {
+                    return;
+                }
+
+                var group = await context.ShapeFactory.New.Block__KbButtonGroup(
+                    new KbButtonGroupBlockViewModel
+                    {
+                        Alignment = run[0].Alignment as string,
+                        Buttons = new List<dynamic>(run)
+                    });
+
+                // The row lays out its own children; the field view must not wrap it.
+                group.SelfPadded = true;
+                result.Add(group);
+                run.Clear();
+            }
+
+            foreach (var shape in shapes)
+            {
+                if (IsInlineButton(shape))
+                {
+                    run.Add(shape);
+                    continue;
+                }
+
+                await FlushAsync();
+                result.Add(shape);
+            }
+
+            await FlushAsync();
+            return result;
+        }
+
+        private static bool IsInlineButton(dynamic shape)
+        {
+            try
+            {
+                string type = shape.Metadata.Type;
+                if (type != "Block__KbButton")
+                {
+                    return false;
+                }
+
+                object inline = shape.Inline;
+                return inline is bool isInline && isInline;
+            }
+            catch (RuntimeBinderException)
+            {
+                return false;
+            }
         }
 
         #endregion

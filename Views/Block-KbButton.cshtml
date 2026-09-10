@@ -5,9 +5,15 @@
     var justify = alignment == "center" ? "center" : alignment == "right" ? "flex-end" : "flex-start";
     var targetAttr = Model.NewTab ? " target=\"_blank\" rel=\"noopener noreferrer\"" : "";
     var hasIcon = Model.HasIcon;
-    var linkStyle = hasIcon ? " style=\"display: inline-flex; align-items: center; gap: 0.4rem;\"" : "";
-
     bool inline = Model.Inline;
+
+    // Inline buttons sit in a KbButtonGroup row: the row's gap does the spacing (so no
+    // trailing margin from .stdbutton) and a label must never break inside its button,
+    // otherwise a narrow screen squeezes the row instead of wrapping whole buttons.
+    var linkStyles = new List<string>();
+    if (hasIcon) { linkStyles.Add("display: inline-flex; align-items: center; gap: 0.4rem"); }
+    if (inline) { linkStyles.Add("white-space: nowrap; margin-right: 0"); }
+    var linkStyle = linkStyles.Count > 0 ? $" style=\"{string.Join("; ", linkStyles)}\"" : "";
 
     // Padding comes from the block's padding tune; rendered on this wrapper
     // (SelfPadded) so inline buttons keep flowing side by side.
@@ -17,7 +23,8 @@
     string padLeft = Pad(Model.PaddingLeft);
     string padRight = Pad(Model.PaddingRight);
 
-    // Inline buttons shrink-wrap and flow side by side; justification only applies to full-width rows
+    // Inline buttons shrink-wrap inside their row (alignment is the row's job, see
+    // Block-KbButtonGroup); full-width buttons justify themselves.
     var wrapperStyle = inline
         ? "display: inline-flex; vertical-align: top"
         : $"display: flex; justify-content: {justify}";
