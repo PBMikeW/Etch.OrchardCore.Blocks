@@ -1,5 +1,6 @@
 import './index.css';
 import { extractWholeBlockStyles, applyWholeBlockStyles } from './inlineStyles';
+import { blockTagOf } from '../utils/legacyMarkup';
 
 /**
  * Format Painter for EditorJS.
@@ -17,6 +18,8 @@ import { extractWholeBlockStyles, applyWholeBlockStyles } from './inlineStyles';
  *     when every non-blank text node in the source block carries the same
  *     value (see ./inlineStyles). A partially coloured block copies no
  *     colour, and a style the source lacks leaves the target's own untouched.
+ *     Legacy <font color> and editor-fs-* markup counts, and painted text
+ *     always comes out in the current tools' markup.
  * Not copied: bold / italic / links, and the padding and anchor tunes (layout
  * and uniqueness respectively — the target keeps its own).
  *
@@ -140,7 +143,7 @@ export function attachFormatPainter(editor, holderEl) {
       level: saved.tool === 'header' ? data.level : undefined,
       listStyle: saved.tool === 'list' ? data.style : undefined,
       alignment: alignmentOf(saved.tunes),
-      styles: extractWholeBlockStyles(textFragments(saved)),
+      styles: extractWholeBlockStyles(textFragments(saved), document, blockTagOf({ type: saved.tool, data })),
     };
     return true;
   };
@@ -182,14 +185,15 @@ export function attachFormatPainter(editor, holderEl) {
       update.style = copied.listStyle;
     }
     if (Object.keys(copied.styles).length && STYLABLE_TOOLS.includes(saved.tool)) {
+      const tag = blockTagOf({ type: saved.tool, data });
       if (saved.tool === 'list') {
         const items = data.items || [];
-        const painted = items.map((item) => applyWholeBlockStyles(item, copied.styles));
+        const painted = items.map((item) => applyWholeBlockStyles(item, copied.styles, document, tag));
         if (painted.some((item, i) => item !== items[i])) {
           update.items = painted;
         }
       } else {
-        const text = applyWholeBlockStyles(data.text || '', copied.styles);
+        const text = applyWholeBlockStyles(data.text || '', copied.styles, document, tag);
         if (text !== data.text) {
           update.text = text;
         }

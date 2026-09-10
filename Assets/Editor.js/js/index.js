@@ -20,6 +20,7 @@ import KbButton from './plugins/kbButton';
 import Breadcrumb from './plugins/breadcrumb';
 import { attachFormatPainter } from './plugins/formatPainter';
 import { attachUndo } from './plugins/crossWidgetUndo';
+import { upgradeLegacyBlocks } from './plugins/utils/legacyMarkup';
 
 window.initializeEditorJS = (
   tenantPath,
@@ -146,6 +147,17 @@ window.initializeEditorJS = (
     };
 
     const initialData = !$hiddenField.value ? {} : JSON.parse($hiddenField.value);
+
+    // Content saved by earlier editor versions carries <font color> attributes
+    // and editor-fs-* size classes that the current colour and size tools do
+    // not recognise (and the admin has no CSS for the classes, so those sizes
+    // are invisible here). Rewrite them to the current markup before the
+    // editor renders and write the result straight back to the field, so a
+    // cloned widget or any page that is saved carries the upgraded content.
+    // Sizes resolve exactly as the site CSS rendered them, so nothing moves.
+    if (upgradeLegacyBlocks(initialData).changed) {
+        $hiddenField.value = JSON.stringify(initialData);
+    }
 
     const editor = new EditorJS({
         holder: id,
