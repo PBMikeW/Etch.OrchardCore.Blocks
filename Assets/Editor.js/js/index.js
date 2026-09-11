@@ -15,6 +15,7 @@ import TextColor from 'editorjs-text-color-plugin';
 
 import LinkTool from './plugins/link';
 import FontSizeTool from './plugins/fontSize';
+import RemoveFormat from './plugins/removeFormat';
 import MediaLibrary from './plugins/mediaLibrary';
 import KbButton from './plugins/kbButton';
 import Breadcrumb from './plugins/breadcrumb';
@@ -109,6 +110,9 @@ window.initializeEditorJS = (
         },
         image: {
             class: MediaLibrary,
+        // Last of the inline tools registered here, so its button renders at
+        // the end of the inline toolbar (toolbar order is registration order).
+        removeFormat: RemoveFormat,
             config: {
                 id,
             },
