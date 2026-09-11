@@ -62,3 +62,22 @@ html[data-bs-theme='dark'] {
     color: #1d202b;
   }
 }
+
+/**
+ * Block settings popover height.
+ * Editor.js hard-codes `--max-height: 270px`, which is far too short for the
+ * tune lists we register: measured 428px of content on a paragraph and 635px
+ * on a header, so the list scrolled inside a stub of a panel. This rule has
+ * to live at GLOBAL scope rather than scoped to the editor like the rest of
+ * our chrome overrides, because Editor.js's `Popover.size` measures a CLONE
+ * of the popover appended to `document.body` — outside any
+ * `.flow-grid .widget-editor` ancestor — and uses that height to decide and
+ * position the popover. A scoped override is invisible to that measurement,
+ * so the editor would place a 270px popover while a 402px one rendered. The
+ * AdminTheme's scoped copy of this rule was removed in favour of this one.
+ * Flipping the popover upward near the bottom of the viewport is handled in
+ * ../js/plugins/popoverFlip.
+ */
+.ce-popover {
+  --max-height: min(80vh, 640px);
+}

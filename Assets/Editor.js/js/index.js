@@ -15,12 +15,19 @@ import TextColor from 'editorjs-text-color-plugin';
 
 import LinkTool from './plugins/link';
 import FontSizeTool from './plugins/fontSize';
+import RemoveFormat from './plugins/removeFormat';
 import MediaLibrary from './plugins/mediaLibrary';
 import KbButton from './plugins/kbButton';
 import Breadcrumb from './plugins/breadcrumb';
 import { attachFormatPainter } from './plugins/formatPainter';
 import { attachUndo } from './plugins/crossWidgetUndo';
+import { attachPopoverFlip } from './plugins/popoverFlip';
 import { upgradeLegacyBlocks } from './plugins/utils/legacyMarkup';
+
+// Flip the block-toolbar popovers upward when they would open off the bottom
+// of the viewport. Page-wide and idempotent, so it is registered once here
+// rather than per editor instance.
+attachPopoverFlip();
 
 window.initializeEditorJS = (
   tenantPath,
@@ -103,6 +110,9 @@ window.initializeEditorJS = (
             inlineToolbar: true,
         },
         fontSize: FontSizeTool,
+        // Last of the inline tools registered here, so its button renders at
+        // the end of the inline toolbar (toolbar order is registration order).
+        removeFormat: RemoveFormat,
         header: {
             class: Header,
             inlineToolbar: true,
