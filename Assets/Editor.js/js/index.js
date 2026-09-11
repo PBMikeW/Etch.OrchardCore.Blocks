@@ -19,7 +19,7 @@ import MediaLibrary from './plugins/mediaLibrary';
 import KbButton from './plugins/kbButton';
 import Breadcrumb from './plugins/breadcrumb';
 import { attachFormatPainter } from './plugins/formatPainter';
-import { attachUndo } from './plugins/crossWidgetUndo';
+import { attachUndo, recordChange } from './plugins/crossWidgetUndo';
 import { upgradeLegacyBlocks } from './plugins/utils/legacyMarkup';
 
 window.initializeEditorJS = (
@@ -159,6 +159,13 @@ window.initializeEditorJS = (
         $hiddenField.value = JSON.stringify(initialData);
     }
 
+    // The form posts this field, so every path that changes the content has to
+    // write it: the editor's own onChange, and an undo (which fires none).
+    const saveToField = (outputData) => {
+        $hiddenField.value = JSON.stringify(outputData);
+        document.dispatchEvent(new Event('contentpreview:render'));
+    };
+
     const editor = new EditorJS({
         holder: id,
 
@@ -170,12 +177,13 @@ window.initializeEditorJS = (
 
         data: initialData,
 
-        onChange: () => {
+        onChange: (api, events) => {
             editor
                 .save()
                 .then((outputData) => {
-                    $hiddenField.value = JSON.stringify(outputData);
-                    document.dispatchEvent(new Event('contentpreview:render'));
+                    saveToField(outputData);
+                    // Undo records from this same save: one save per change.
+                    recordChange(editor, outputData, events);
                 })
                 .catch((error) => {});
         },
@@ -191,7 +199,9 @@ window.initializeEditorJS = (
     editor.isReady.then(() => {
         const holderEl = document.getElementById(id);
         attachFormatPainter(editor, holderEl);
-        attachUndo(editor, holderEl, initialData);
+        // An undo re-renders the blocks, and EditorJS fires no onChange for
+        // its own render, so it hands us the post-render data to store.
+        attachUndo(editor, holderEl, saveToField);
     });
 
     if ($form) {
