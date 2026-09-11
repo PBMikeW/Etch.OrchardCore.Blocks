@@ -39,3 +39,26 @@ html:not([data-bs-theme='dark']) {
     box-decoration-break: clone;
   }
 }
+
+/**
+ * Dark admin theme: keep the editor chrome light.
+ * OrchardCore's dark theme switches the browser colour scheme to dark, so form
+ * fields default to light text. Editor.js paints its toolbars and popovers
+ * light and sets no text colour on the link URL box, so adding a hyperlink in
+ * dark mode meant typing white text into a near-white box; the toolbox search
+ * box had the same problem. Pin the chrome (not the content canvas) to a light
+ * scheme with Editor.js's own dark text, which also covers the inputs and
+ * selects our block tunes render inside the settings popover.
+ */
+html[data-bs-theme='dark'] {
+  .ce-inline-toolbar,
+  .ce-popover {
+    color-scheme: light;
+    color: #1d202b;
+  }
+
+  .ce-inline-tool-input,
+  .cdx-search-field__input {
+    color: #1d202b;
+  }
+}
