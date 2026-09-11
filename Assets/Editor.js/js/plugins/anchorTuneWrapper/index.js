@@ -1,3 +1,4 @@
+import './index.css';
 import AnchorTune from 'editorjs-anchor';
 
 /**

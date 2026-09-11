@@ -1,0 +1,69 @@
+/**
+ * AnchorTuneWrapper styles — the single owner of this markup.
+ *
+ * index.js builds `.anchor-tune-input-wrapper` (the anchor input plus a copy
+ * button), so the fork owns the CSS for it. The web and portal AdminTheme
+ * stylesheets (flowpart-wysiwyg.scss) each carried a near-identical copy of
+ * these rules; two stylesheets styling one element means whichever loads last
+ * wins per property, so the button's look was load-order dependent. The copy
+ * button's appearance below is that AdminTheme block, value for value, so
+ * deleting it there changes nothing on screen.
+ *
+ * The layout half is new, and is what stops the block settings popover
+ * overflowing. editorjs-anchor renders its input inside Editor.js's
+ * `.cdx-search-field`, which is `display: grid; grid-template-columns: auto
+ * auto 1fr`, and Editor.js gives that input `min-width: calc(100% - 26px -
+ * var(--icon-margin-right))`, sized for sitting in the grid directly. index.js
+ * moves the input into the wrapper, so that minimum now resolves against the
+ * wrapper: the wrapper's own minimum width comes out wider than the popover,
+ * which has a fixed 171px of content width, and the popover grew a horizontal
+ * scrollbar (measured 209px of content in a 171px box) that also stole 15px of
+ * its height. Clearing that inherited minimum and making the wrapper a
+ * shrinkable flex row lets the row size to the popover instead of the other
+ * way round.
+ */
+.anchor-tune-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+/* `.anchor-tune-input-wrapper input` outranks Editor.js's own
+   `.cdx-search-field__input` rule, which is what the min-width has to beat. */
+.anchor-tune-input-wrapper input {
+  min-width: 0;
+  flex: 1 1 auto;
+  width: auto;
+}
+
+.anchor-tune-copy-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid #e8e8eb;
+  border-radius: 4px;
+  background: #fff;
+  color: #707684;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.1s ease, color 0.1s ease;
+}
+
+.anchor-tune-copy-btn:hover {
+  background: #eff2f5;
+  color: #388ae5;
+}
+
+/* _showFeedback() swaps the icon for the word "Copied!", so this state drops
+   the square button's fixed width and pads to the text instead. */
+.anchor-tune-copy-btn--copied {
+  background: #d4edda;
+  color: #155724;
+  font-size: 11px;
+  width: auto;
+  padding: 0 8px;
+}
