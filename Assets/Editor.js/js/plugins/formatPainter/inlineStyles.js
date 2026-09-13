@@ -121,7 +121,9 @@ function isBareWrapper(el) {
 // Remove `prop` from every element that sets it, dropping wrappers left empty.
 // Links are left alone: an inline colour on <a> is a separate editorial choice,
 // and the theme's link colour beats the painted wrapper anyway.
-function stripProperty(root, prop) {
+// Exported for ../textPreset, whose "None" strips the properties a preset owns
+// without re-wrapping anything afterwards.
+export function stripProperty(root, prop) {
   Array.from(root.querySelectorAll('*')).forEach((el) => {
     if (el.tagName === 'A') {
       return;

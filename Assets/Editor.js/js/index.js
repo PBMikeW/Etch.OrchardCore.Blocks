@@ -20,6 +20,7 @@ import MediaLibrary from './plugins/mediaLibrary';
 import KbButton from './plugins/kbButton';
 import Breadcrumb from './plugins/breadcrumb';
 import { attachFormatPainter } from './plugins/formatPainter';
+import TextPresetTune, { attachTextPresets } from './plugins/textPreset';
 import { attachUndo, recordChange } from './plugins/crossWidgetUndo';
 import { attachPopoverFlip } from './plugins/popoverFlip';
 import { upgradeLegacyBlocks } from './plugins/utils/legacyMarkup';
@@ -78,6 +79,7 @@ window.initializeEditorJS = (
             class: AnchorTune,
         },
         paddingTune: PaddingTune,
+        textPreset: TextPresetTune,
         breadcrumb: Breadcrumb,
         Color: {
             // Disable the A-button apply. editorjs routes an A-button click through
@@ -183,7 +185,10 @@ window.initializeEditorJS = (
 
         tools: baseTools,
 
-        tunes: ['alignmentTune', 'anchorTune', 'paddingTune'],
+        // textPreset first: "Style" is the most-used row of the settings
+        // popover, and the popover is already tall enough that anything below
+        // the padding inputs needs scrolling to reach.
+        tunes: ['textPreset', 'alignmentTune', 'anchorTune', 'paddingTune'],
 
         data: initialData,
 
@@ -205,10 +210,12 @@ window.initializeEditorJS = (
     window.__editorJSInstances[id] = { editor, hiddenFieldId };
 
     // Format painter: copy a block's type/heading-level and paint it onto others.
+    // Text presets: apply a named style to this block or the whole selection.
     // Cross-widget undo: a single Ctrl+Z/Y timeline across all editor instances.
     editor.isReady.then(() => {
         const holderEl = document.getElementById(id);
         attachFormatPainter(editor, holderEl);
+        attachTextPresets(editor, holderEl);
         // An undo re-renders the blocks, and EditorJS fires no onChange for
         // its own render, so it hands us the post-render data to store.
         attachUndo(editor, holderEl, saveToField);

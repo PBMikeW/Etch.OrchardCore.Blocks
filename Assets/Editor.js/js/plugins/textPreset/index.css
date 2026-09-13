@@ -1,0 +1,118 @@
+/* Toolbar button — deliberately the same chrome as the format painter's brush
+   next to it (.ce-format-painter-btn), so the two read as one pair of tools. */
+.ce-text-preset-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  margin-left: 3px;
+  padding: 0;
+  border: 1px solid rgba(201, 201, 204, 0.48);
+  border-radius: 7px;
+  background-color: #fff;
+  box-shadow: 0 2px 3px rgba(0, 0, 0, 0.04);
+  color: #1d202b;
+  cursor: pointer;
+  user-select: none;
+  /* The toolbar actions row is pointer-events:none by default; real buttons
+     must re-enable it or they can't be clicked. */
+  pointer-events: auto;
+}
+
+.ce-text-preset-btn:hover {
+  background-color: #f8f8f8;
+}
+
+.ce-text-preset-btn--active {
+  background-color: #e7ebf1; /* PB Blue 200 */
+  border-color: #99acc4; /* PB Blue 300 */
+  color: #002d6a; /* PB Blue 500 */
+}
+
+/* The dropdown lives on <body>, not inside .codex-editor: EditorJS hides the
+   toolbar whenever the pointer leaves a block, and .codex-editor is a stacking
+   context a menu drawn inside it cannot escape (see ../../css/index.scss).
+   Being outside the editor also means none of the admin's editor-scoped
+   overrides reach it, so every colour here is explicit — and the scheme is
+   pinned light, exactly like the .ce-popover rule in ../../css/index.scss,
+   because OrchardCore's dark admin theme switches the browser colour scheme
+   and would otherwise paint our text and controls for a dark canvas. */
+.ce-text-preset-menu {
+  position: fixed;
+  z-index: 1000;
+  min-width: 210px;
+  max-height: min(70vh, 520px);
+  overflow-y: auto;
+  padding: 4px;
+  border: 1px solid rgba(201, 201, 204, 0.48);
+  border-radius: 8px;
+  background-color: #fff;
+  box-shadow: 0 3px 15px -3px rgba(13, 20, 33, 0.13);
+  color: #1d202b;
+  color-scheme: light;
+  font-size: 14px;
+  line-height: 20px;
+  user-select: none;
+}
+
+.ce-text-preset-menu__ground,
+.ce-text-preset-menu__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  margin: 0;
+  padding: 5px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ce-text-preset-menu__ground:hover,
+.ce-text-preset-menu__item:hover {
+  background-color: #f8f8f8;
+}
+
+.ce-text-preset-menu__item--active {
+  background-color: #e7ebf1; /* PB Blue 200 — matches the toolbar button's active state */
+  font-weight: 600;
+}
+
+.ce-text-preset-menu__sep {
+  height: 1px;
+  margin: 4px 2px;
+  background-color: rgba(201, 201, 204, 0.48);
+}
+
+.ce-text-preset-menu__swatch,
+.ce-text-preset-menu__ground-swatch {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  border: 1px solid rgba(29, 32, 43, 0.35);
+  border-radius: 50%;
+  background-color: transparent;
+}
+
+/* On the dark ground the preset colours are light, so each swatch gets a dark
+   chip behind it — white on the menu's white would read as "no colour". */
+.ce-text-preset-menu--dark .ce-text-preset-menu__swatch {
+  margin-left: 3px;
+  box-shadow: 0 0 0 3px #1d202b;
+}
+
+/* "None" carries no colour, so its swatch is a struck-through empty circle. */
+.ce-text-preset-menu__swatch--none {
+  background-image: linear-gradient(
+    45deg,
+    transparent 45%,
+    rgba(29, 32, 43, 0.55) 45%,
+    rgba(29, 32, 43, 0.55) 55%,
+    transparent 55%
+  );
+}
