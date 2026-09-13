@@ -6,6 +6,7 @@ import {
   DARK_GROUND,
   LIGHT_GROUND,
   alignmentOfTunes,
+  hasStyleMarkup,
   isClearPreset,
   matchesFingerprint,
   readPresets,
@@ -46,10 +47,16 @@ import {
  * in sessionStorage: an editor building a dark banner flips once and then just
  * picks roles.
  *
- * Lists keep their structure: a preset applied to a list block styles each
- * item and does NOT convert it to a paragraph. Converting would join the
- * bullets into one line (that is what the tool's exporter does), which is far
- * too destructive for a menu click that may be hitting four blocks at once.
+ * Lists and quotes keep their structure: a preset applied to one styles its
+ * text in place and does NOT convert it to a paragraph. Converting would join a
+ * list's bullets into one line and fold a quote's caption into its text (that
+ * is what the tools' own exporters do), which is far too destructive for a menu
+ * click that may be hitting four blocks at once.
+ *
+ * Known cost of the conversions that do still happen: a paragraph with a <br>
+ * in it loses the <br> on the way to a heading, because blocks.convert()
+ * sanitises against the NEW tool and @editorjs/header's sanitiser config does
+ * not allow one.
  *
  * Batching. EditorJS delivers one batched `onChange` per user action (its
  * modification observer holds mutations for 400 ms), so the N blocks.update()
@@ -57,11 +64,27 @@ import {
  * therefore one Ctrl+Z, for the whole selection. See ../crossWidgetUndo.
  */
 
-// Tools the Style menu is offered on. Quote is included because it converts
-// cleanly, even though its sanitiser drops the inline markup on save.
+// Tools the Style menu is offered on, for BOTH ways in: a block whose tool is
+// not in here gets no "Style" row in its settings popover and no toolbar button
+// (table, image, embed, kbButton, raw, delimiter all carry no text a preset
+// could own, and a live-looking button that opens nine no-op rows is worse than
+// no button at all).
 const MENU_TOOLS = ['paragraph', 'header', 'list', 'quote'];
-// Tools whose saved text keeps inline markup, so a preset can style them.
-const STYLABLE_TOOLS = ['paragraph', 'header', 'list'];
+// Tools with text "None" can clear.
+const STYLABLE_TOOLS = ['paragraph', 'header', 'list', 'quote'];
+// Tools a preset styles in place rather than converting; see the header note.
+// A quote is styled on its `text` alone, so its caption is never touched.
+//
+// One caveat on quotes, recorded here because it is invisible from this file:
+// @editorjs/quote's sanitiser allows only <br> in `text`, and the fork
+// registers the tool without `inlineToolbar` (Assets/Editor.js/js/index.js), so
+// it inherits no inline-tool rules either. A quote therefore drops ALL inline
+// markup on editor.save() — its own <b> as much as a preset's <font> — and a
+// preset on a quote is a no-op once saved. Styling it in place is still the
+// right behaviour here: it leaves the block intact instead of destroying it,
+// and the day the quote tool is registered with the inline toolbar the colour
+// starts sticking with no change to this file.
+const KEEPS_TYPE = ['list', 'quote'];
 
 // Properties a preset owns, in the ../formatPainter/inlineStyles vocabulary.
 // "None" clears exactly these and nothing else.
@@ -87,16 +110,18 @@ const CLEAR_ICON = `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" 
 
 // Shared across every editor instance on the page, like the format painter's:
 // the bundle loads once and each ContentBlock widget is its own editor.
-let cachedPresets = null;
 let currentGroundValue = null;
 let openMenu = null;
 let escListenerAttached = false;
 
+// Read once per menu, never cached for the page's lifetime: the island is
+// ordinary DOM, so it can arrive after this bundle or be swapped by another
+// script, and an editor looking at yesterday's vocabulary has no way to tell.
+// Parsing a handful of rows costs nothing next to opening a menu — but it is
+// still one read per menu, threaded through to whatever repaints the rows,
+// rather than one per row.
 function presets() {
-  if (!cachedPresets) {
-    cachedPresets = readPresets(document);
-  }
-  return cachedPresets;
+  return readPresets(document);
 }
 
 function ground() {
@@ -139,6 +164,20 @@ function safeColor(value) {
   return /^#[0-9a-f]{3,8}$/i.test(value) || /^[a-z]+$/i.test(value) ? value : '';
 }
 
+// A preset label, safe to hand to something that will set it as innerHTML.
+// EditorJS renders a popover item's `title` with innerHTML, and a label can
+// come from a site's data island (see sanitisePreset in ./presets.js), so an
+// island shipping `<img src=x onerror=...>` as a label would otherwise run it
+// in the admin. A text node is the escaper: what the browser round-trips out of
+// textContent is by definition safe to put back in as HTML.
+//
+// Our own dropdown in section 2 needs no equivalent — it assigns textContent.
+function escapeHtml(value) {
+  const probe = document.createElement('span');
+  probe.textContent = value == null ? '' : String(value);
+  return probe.innerHTML;
+}
+
 function swatchIcon(preset) {
   if (isClearPreset(preset)) {
     return CLEAR_ICON;
@@ -164,10 +203,37 @@ const GROUND_ITEM_NAME = 'textPresetGround';
 // Reading a block
 // ---------------------------------------------------------------------------
 
+// The alignment a block is at: the current tune key, then the legacy one, then
+// the DOM.
+//
+// Both tune keys come first because only `alignmentTune` has any effect in the
+// editor — AlignmentTune.wrap() writes text-align from its own data, and a
+// block whose alignment still lives under the legacy `anyTune` key renders
+// left-aligned here while the site centres it. Reading the DOM alone would
+// therefore show an old centred h4 as unaligned, and "Stat / tile label" would
+// never look active on exactly the blocks it was built for.
+function alignmentOfBlock(tunes, content) {
+  const tuned = tunes && (tunes.alignmentTune || tunes.anyTune);
+  // alignmentOfTunes defaults to 'left', which would mask the DOM, so the keys
+  // are checked for a value before it is trusted for the precedence.
+  if (tuned && tuned.alignment) {
+    return alignmentOfTunes(tunes);
+  }
+  // The tune writes text-align onto the tool's element, and re-writes it onto
+  // .ce-block__content when it is clicked; either can be the live one.
+  return content.style.textAlign
+    || (content.firstElementChild && content.firstElementChild.style.textAlign)
+    || 'left';
+}
+
 // The block settings popover renders synchronously, but block.save() is async,
 // so the fingerprint is read off the rendered block instead. That is the honest
 // source anyway: the DOM is exactly what the block would save.
-function fingerprintOfBlock(block) {
+//
+// `tunes` is the one thing the DOM cannot answer for (see alignmentOfBlock), so
+// it is an optional second pass: both menus paint from the DOM first and
+// repaint with the saved tunes when they land. See repaintForLegacyAlignment.
+function fingerprintOfBlock(block, tunes) {
   const holder = block && block.holder;
   const content = holder && holder.querySelector('.ce-block__content');
   if (!content) {
@@ -176,19 +242,42 @@ function fingerprintOfBlock(block) {
   const heading = block.name === 'header' ? content.querySelector('h1, h2, h3, h4, h5, h6') : null;
   const level = heading ? Number(heading.tagName.slice(1)) : undefined;
   const tag = blockTagOf({ type: block.name, data: { level } });
-  const styles = extractWholeBlockStyles([content.innerHTML], document, tag);
+  const html = content.innerHTML;
+  const styles = extractWholeBlockStyles([html], document, tag);
   return {
     tool: block.name,
     level,
     color: styles.color,
     backgroundColor: styles.backgroundColor,
     fontSize: styles.fontSize,
-    // The tune writes text-align onto the tool's element, and re-writes it onto
-    // .ce-block__content when it is clicked; either can be the live one.
-    alignment: content.style.textAlign
-      || (content.firstElementChild && content.firstElementChild.style.textAlign)
-      || 'left',
+    // Whether there is ANY colour or size markup, whole-block or not: what
+    // "None" would have to clear. See hasStyleMarkup in ./presets.js.
+    styled: hasStyleMarkup(html),
+    alignment: alignmentOfBlock(tunes, content),
   };
+}
+
+// The saved tunes are the only place a legacy `anyTune` alignment exists, and
+// block.save() is async while both menus are built synchronously — so a menu is
+// painted from the DOM and then repainted once the save lands. That is a
+// microtask or two later, which is after the rows are in the document but well
+// inside the time it takes to read a menu and move the mouse to a row.
+//
+// Only legacy blocks pay for it, and only they can be wrong: with no `anyTune`
+// the DOM has already answered, and nothing is repainted.
+function repaintForLegacyAlignment(block, repaint) {
+  if (!block || typeof block.save !== 'function') {
+    return;
+  }
+  block.save().then((saved) => {
+    const tunes = saved && saved.tunes;
+    if (tunes && tunes.anyTune) {
+      repaint(fingerprintOfBlock(block, tunes));
+    }
+  }).catch(() => {
+    // A block that cannot save cannot be fingerprinted any better than the DOM
+    // already has been; the menu stays as painted.
+  });
 }
 
 // Measured on EditorJS 2.31.6: pressing the block settings button COLLAPSES a
@@ -325,11 +414,15 @@ function restyle(html, plan, tag) {
   if (plan.clear) {
     return stripStyles(html, PRESET_PROPS, tag);
   }
-  // A preset owns size as much as colour: one that names no size has to take
-  // any existing size off, or "Body" over an old "Intro" keeps the intro size.
+  // A preset owns size as much as colour, so the existing size always comes off
+  // first — whether or not the preset names one. Without this, "Body" over an
+  // old "Intro" keeps the intro size, AND "Intro" over a block carrying a
+  // styleless <span class="fontsize-tool"> or an out-of-range editor-fs-* class
+  // nests one size wrapper inside another: applyWholeBlockStyles only strips
+  // the sizes it can see as inline styles, and those two carry none.
   // A highlight is left alone — presets do not own it, and only "None" clears
   // it — so the strip list here is the size and nothing else.
-  const base = plan.styles.fontSize ? html : stripStyles(html, ['fontSize'], tag);
+  const base = stripStyles(html, ['fontSize'], tag);
   return applyWholeBlockStyles(base, plan.styles, document, tag);
 }
 
@@ -364,13 +457,12 @@ async function applyPresetToBlock(api, block, plan) {
   // blocks.update() replaces every tune with what it is handed, so the block's
   // own anchor and padding have to be carried across by hand.
   const tunes = { ...saved.tunes };
-  const startedAt = alignmentOfTunes(tunes);
   let target = block;
 
-  // A list keeps its type (see the header comment); everything else converts
-  // when the preset names a different one. An unconvertible block — table,
-  // image, button — throws here and is reported by the caller.
-  const converted = !plan.clear && saved.tool !== 'list' && saved.tool !== plan.tool;
+  // Lists and quotes keep their type (see the header comment); everything else
+  // converts when the preset names a different one. An unconvertible block —
+  // table, image, button — throws here and is reported by the caller.
+  const converted = !plan.clear && KEEPS_TYPE.indexOf(saved.tool) === -1 && saved.tool !== plan.tool;
   if (converted) {
     target = await api.blocks.convert(block.id, plan.tool, conversionOverrides(saved, plan));
     saved = await target.save();
@@ -395,6 +487,9 @@ async function applyPresetToBlock(api, block, plan) {
       update.items = styled;
     }
   } else {
+    // `text` only, for a quote as much as for a paragraph or a heading: the
+    // update is merged into the block's existing data, so a quote's caption and
+    // its own alignment field come through untouched.
     const text = restyle(data.text || '', plan, tag);
     if (text !== (data.text || '')) {
       update.text = text;
@@ -402,9 +497,30 @@ async function applyPresetToBlock(api, block, plan) {
   }
 
   // Alignment only when the preset names one: otherwise the block keeps its own.
-  const alignmentChanged = !!plan.alignment && plan.alignment !== startedAt;
+  //
+  // The test is against `alignmentTune` alone, NOT against alignmentOfTunes:
+  // the server reads only alignmentTune, so a block whose alignment still lives
+  // under the legacy `anyTune` key needs alignmentTune written even though it
+  // already looks aligned — otherwise applying a centring preset to an old
+  // centred block is a silent no-op and the alignment stays invisible to this
+  // editor for good. And `anyTune` goes when alignmentTune is written, so the
+  // two keys can never be left disagreeing.
+  let alignmentChanged = false;
   if (plan.alignment) {
-    tunes.alignmentTune = plan.alignment === 'left' ? undefined : { alignment: plan.alignment };
+    // What the server reads today, and the legacy value that would contradict
+    // it. Either being wrong is a write; the tune stores nothing for its 'left'
+    // default, so absent and left are the same thing on both sides.
+    const written = (tunes.alignmentTune && tunes.alignmentTune.alignment) || 'left';
+    const legacy = tunes.anyTune && tunes.anyTune.alignment;
+    if (written !== plan.alignment || legacy) {
+      tunes.alignmentTune = plan.alignment === 'left' ? undefined : { alignment: plan.alignment };
+      if (legacy) {
+        // Only an alignment is dropped: `anyTune` is somebody else's key and
+        // anything else it might hold is none of this preset's business.
+        delete tunes.anyTune;
+      }
+      alignmentChanged = true;
+    }
   }
 
   if (!converted && !Object.keys(update).length && !alignmentChanged) {
@@ -455,7 +571,7 @@ export async function applyPreset(api, blockIds, preset) {
 // its items take no updates after render, and onActivate is called with the
 // item's params only (no event, no element), so the rows are found by the
 // data-item-name EditorJS writes from `name`.
-function refreshTuneMenu(fingerprint) {
+function refreshTuneMenu(list, fingerprint) {
   // Searched from the document rather than from one popover element: only one
   // settings popover is ever open, and the nested list EditorJS renders for
   // `children` is not always a descendant of the row it belongs to.
@@ -471,7 +587,7 @@ function refreshTuneMenu(fingerprint) {
       icon.innerHTML = GROUND_ICONS[ground()];
     }
   }
-  presets().forEach((preset) => {
+  list.forEach((preset) => {
     const row = root.querySelector(`[data-item-name="${itemName(preset)}"]`);
     if (!row) {
       return;
@@ -484,7 +600,9 @@ function refreshTuneMenu(fingerprint) {
   });
 }
 
-function tuneMenuItems(api, fingerprint, blockIds) {
+// `list` is the island read for this menu, threaded through so the ground
+// toggle's refresh cannot pick up a different table half way through a gesture.
+function tuneMenuItems(api, list, fingerprint, blockIds) {
   const items = [
     {
       icon: GROUND_ICONS[ground()],
@@ -495,15 +613,17 @@ function tuneMenuItems(api, fingerprint, blockIds) {
       closeOnActivate: false,
       onActivate: () => {
         toggleGround();
-        refreshTuneMenu(fingerprint);
+        refreshTuneMenu(list, fingerprint);
       },
     },
     { type: 'separator' },
   ];
-  presets().forEach((preset) => {
+  list.forEach((preset) => {
     items.push({
       icon: swatchIcon(preset),
-      title: preset.label,
+      // Escaped: EditorJS puts `title` into the row with innerHTML. See
+      // escapeHtml.
+      title: escapeHtml(preset.label),
       name: itemName(preset),
       isActive: matchesFingerprint(preset, ground(), fingerprint, document),
       closeOnActivate: true,
@@ -545,13 +665,15 @@ export default class TextPresetTune {
     const redactor = holder ? holder.closest('.codex-editor__redactor') : null;
     const blockIds = targetBlockIds(this.api, redactor, this.block);
     const selectionCount = blockIds.length;
+    const list = presets();
+    repaintForLegacyAlignment(this.block, (corrected) => refreshTuneMenu(list, corrected));
     return {
       icon: PRESET_ICON,
       title: selectionCount > 1 ? `Style (${selectionCount} blocks)` : 'Style',
       name: 'textPreset',
       children: {
         searchable: false,
-        items: tuneMenuItems(this.api, fingerprint, blockIds),
+        items: tuneMenuItems(this.api, list, fingerprint, blockIds),
       },
     };
   }
@@ -595,7 +717,15 @@ function positionDropdown(element, button) {
   element.style.left = `${left}px`;
 }
 
+/**
+ * Our own menu for the toolbar button.
+ *
+ * @returns {{ element: HTMLElement, paint: (fingerprint: object) => void }}
+ *   `paint` re-marks the active row for a corrected fingerprint; see
+ *   repaintForLegacyAlignment.
+ */
 function buildDropdown(api, fingerprint, blockIds) {
+  let current = fingerprint;
   const element = document.createElement('div');
   element.className = 'ce-text-preset-menu';
 
@@ -660,7 +790,7 @@ function buildDropdown(api, fingerprint, blockIds) {
       }
       row.classList.toggle(
         'ce-text-preset-menu__item--active',
-        matchesFingerprint(preset, ground(), fingerprint, document),
+        matchesFingerprint(preset, ground(), current, document),
       );
     });
   };
@@ -674,7 +804,13 @@ function buildDropdown(api, fingerprint, blockIds) {
     paintRows();
   });
 
-  return element;
+  return {
+    element,
+    paint: (corrected) => {
+      current = corrected;
+      paintRows();
+    },
+  };
 }
 
 export function attachTextPresets(editor, holderEl) {
@@ -683,18 +819,48 @@ export function attachTextPresets(editor, holderEl) {
   }
   ensureSnapshotListener();
 
-  const openDropdown = (button) => {
+  // Whether a preset has anything to say about this block's tool.
+  const isStyleable = (block) => !!block && MENU_TOOLS.indexOf(block.name) !== -1;
+
+  // The toolbar actions row is ONE row reused for every block, so the button's
+  // state has to follow the block the toolbar is pointing at — see MENU_TOOLS
+  // for why a table must not get a live-looking button. Hidden with an inline
+  // style rather than a class: it beats the display rule in ./index.css with no
+  // second rule to keep in step.
+  //
+  // The block under the pointer wins, because that is the one EditorJS moves
+  // the toolbar to; getCurrentBlockIndex() is the fallback for a caret moved by
+  // keyboard, where there is no hovered element to read.
+  const blockUnderPointer = (fromEl) => {
+    const blockEl = fromEl && fromEl.closest ? fromEl.closest('.ce-block') : null;
+    const hovered = blockEl ? editor.blocks.getBlockByElement(blockEl) : null;
+    return hovered || currentBlockOf(editor);
+  };
+
+  const syncButton = (button, fromEl) => {
+    const styleable = isStyleable(blockUnderPointer(fromEl));
+    button.style.display = styleable ? '' : 'none';
+    return styleable;
+  };
+
+  const openDropdown = (button, block) => {
     const redactor = redactorOf(holderEl);
-    const block = currentBlockOf(editor);
     const blockIds = targetBlockIds(editor, redactor, block);
     if (!blockIds.length) {
       return;
     }
     const fingerprint = block ? fingerprintOfBlock(block) : null;
-    const element = buildDropdown(editor, fingerprint, blockIds);
+    const { element, paint } = buildDropdown(editor, fingerprint, blockIds);
     document.body.appendChild(element);
     positionDropdown(element, button);
     button.classList.add('ce-text-preset-btn--active');
+    // Legacy alignment lands a microtask later; ignore it if this menu has
+    // already been closed or replaced in the meantime.
+    repaintForLegacyAlignment(block, (corrected) => {
+      if (openMenu && openMenu.element === element) {
+        paint(corrected);
+      }
+    });
 
     const onDocMouseDown = (e) => {
       if (element.contains(e.target) || button.contains(e.target)) {
@@ -715,8 +881,15 @@ export function attachTextPresets(editor, holderEl) {
     e.stopPropagation();
     const wasOpen = !!openMenu;
     closeDropdown();
+    // Re-checked here as well as on hover: a keyboard caret move can put the
+    // toolbar on an unstyleable block without a mouseover ever firing.
+    const block = currentBlockOf(editor);
+    if (!isStyleable(block)) {
+      e.currentTarget.style.display = 'none';
+      return;
+    }
     if (!wasOpen) {
-      openDropdown(e.currentTarget);
+      openDropdown(e.currentTarget, block);
     }
   };
 
@@ -734,8 +907,28 @@ export function attachTextPresets(editor, holderEl) {
     button.innerHTML = PRESET_ICON;
     button.addEventListener('mousedown', onButtonMouseDown);
     actions.appendChild(button);
+    syncButton(button, null);
     return true;
   };
+
+  // One listener per editor, and only recomputed when the pointer crosses into
+  // a different block: mouseover fires for every element inside one.
+  let lastBlockEl = null;
+  holderEl.addEventListener('mouseover', (e) => {
+    const blockEl = e.target && e.target.closest ? e.target.closest('.ce-block') : null;
+    // Nothing outside a block re-decides this. The toolbar is a sibling of the
+    // blocks, so the pointer leaves the block on its way to the button — and
+    // falling back to the caret's block there would show the button again over
+    // the very table it was just hidden for.
+    if (!blockEl || blockEl === lastBlockEl) {
+      return;
+    }
+    lastBlockEl = blockEl;
+    const button = holderEl.querySelector('.ce-text-preset-btn');
+    if (button) {
+      syncButton(button, e.target);
+    }
+  });
 
   // The toolbar actions row may not exist at init; retry via observer, exactly
   // as the format painter injects its brush.
