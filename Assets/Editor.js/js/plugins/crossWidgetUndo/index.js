@@ -485,11 +485,12 @@ export function recordChange(editor, savedData, events) {
  * discarding it along with the step before it.
  */
 async function flushPendingTyping() {
-  const focused = instances.filter((instance) => instance.holderEl.contains(document.activeElement));
-  // save() is cheap; with nothing focused we cannot tell which editor is
-  // mid-run, so check them all.
-  const targets = focused.length ? focused : instances.slice();
-  for (const instance of targets) {
+  // Every instance, never just the focused one. EditorJS batches per editor,
+  // so a run typed in widget A can still be undelivered when Ctrl+Z is pressed
+  // in widget B; left pending, A's batch lands after the undo, truncates the
+  // redo branch and takes B's step with it, unrecoverably. save() is cheap.
+  // instances.slice() because recordSnapshot below can drop a detached one.
+  for (const instance of instances.slice()) {
     if (!instance.snapshots.length) {
       continue;
     }
@@ -541,6 +542,12 @@ async function applyTo(instance, snapshotIndex, fallbackFocusIndex) {
       snapshot.json = JSON.stringify(saved.blocks || []);
     } catch (err) {
       console.warn('Cross-widget undo: could not re-read the editor after a render', err);
+      // The screen already shows the undone content. Without a fallback the
+      // onApplied hook below is skipped and the hidden field the form posts
+      // keeps the PRE-undo content, so a save would silently restore what the
+      // user just undid. The snapshot we rendered is the next best truth;
+      // saveToField only reads `blocks`, so time/version can be left off.
+      saved = { blocks };
     }
     armEcho(instance, snapshot.json);
 
@@ -621,9 +628,11 @@ async function step(forward) {
       changedIndexOf(entry)
     );
     // Only move on a render that worked, so the pointer cannot drift away
-    // from what the editors actually show.
+    // from what the editors actually show. Derived from `target` rather than
+    // the pointer we started with: dropInstance may have shifted the pointer
+    // while we walked, and a batched onChange can land during the await.
     if (applied) {
-      pointer = forward ? pointer + 1 : pointer - 1;
+      pointer = forward ? target : target - 1;
     }
     return applied;
   } finally {
@@ -641,14 +650,19 @@ export function redo() {
 }
 
 /**
- * 'z', 'y' or '' for a keydown. A single-character e.key is what the user's
- * layout actually produced, so it wins — on QWERTZ, Ctrl+Z is the key that
- * types z, whichever physical key that is. e.code is the fallback for layouts
- * whose e.key is a non-Latin character or a dead key.
+ * 'z', 'y' or '' for a keydown.
+ *
+ * A single Latin letter in e.key is what the user's layout actually
+ * produced, so it wins: on QWERTZ, Ctrl+Z is the key that types z,
+ * whichever physical key that is. Anything else falls through to the
+ * physical key in e.code, because we cannot read it as a letter: a
+ * Cyrillic or Greek layout puts its own alphabet in e.key, and a dead key
+ * or a named key is not a letter at all. Testing e.key.length alone never
+ * reached e.code, since a single non-Latin character returned '' first.
  */
 function undoLetter(e) {
   const key = typeof e.key === 'string' ? e.key.toLowerCase() : '';
-  if (key.length === 1) {
+  if (/^[a-z]$/.test(key)) {
     return key === 'z' || key === 'y' ? key : '';
   }
   const code = typeof e.code === 'string' ? e.code : '';
@@ -659,7 +673,9 @@ function undoLetter(e) {
 }
 
 function onGlobalKeyDown(e) {
-  if (!e.ctrlKey && !e.metaKey || e.isComposing) {
+  // Alt is somebody else's shortcut: Ctrl+Alt+Z is not undo, and on Windows
+  // AltGr arrives as Ctrl+Alt, where the key is producing a character.
+  if ((!e.ctrlKey && !e.metaKey) || e.altKey || e.isComposing) {
     return;
   }
   const letter = undoLetter(e);
