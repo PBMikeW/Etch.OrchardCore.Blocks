@@ -150,6 +150,31 @@ function normaliseSize(value) {
   return value ? String(value).trim().toLowerCase() : '';
 }
 
+// Colour, highlight and size markup in every spelling the editor has written:
+// the current tools' <font>, <mark> and span.fontsize-tool, plus the legacy
+// <font color> and editor-fs-* classes from ../utils/legacyMarkup.js.
+const STYLE_MARKUP = /<font\b|<mark\b|fontsize-tool|editor-fs-/i;
+
+/**
+ * Does this markup carry ANY colour, highlight or size wrapper?
+ *
+ * extractWholeBlockStyles answers a deliberately different question — "is the
+ * WHOLE block one colour" — and reports nothing for a block where only a phrase
+ * is coloured. "None" still has that phrase to clear, so it must not read as
+ * already applied there; this is the check that notices the difference.
+ *
+ * A substring test, not a DOM walk: it runs for every row of every menu open,
+ * the false positives it can have are harmless (a row reading inactive that
+ * could have read active), and there is no markup the editor writes for a
+ * colour or a size that does not contain one of these four.
+ *
+ * @param {string|string[]} html  a block's text, or one fragment per list item
+ */
+export function hasStyleMarkup(html) {
+  const fragments = Array.isArray(html) ? html : [html];
+  return fragments.some((fragment) => typeof fragment === 'string' && STYLE_MARKUP.test(fragment));
+}
+
 /**
  * What applying `preset` on `ground` means, independent of any block.
  *
@@ -190,8 +215,12 @@ export function resolve(preset, ground) {
  * default, so absent means left either way.
  */
 export function alignmentOfTunes(tunes) {
-  const tune = tunes && (tunes.alignmentTune || tunes.anyTune);
-  return (tune && tune.alignment) || 'left';
+  const current = tunes && tunes.alignmentTune;
+  const legacy = tunes && tunes.anyTune;
+  // A key carrying no alignment does not mask the next one: the tune saves
+  // nothing for its 'left' default, so an empty `alignmentTune` means "nothing
+  // recorded here", not "left", and the legacy key still has the answer.
+  return (current && current.alignment) || (legacy && legacy.alignment) || 'left';
 }
 
 /**
@@ -203,7 +232,8 @@ export function alignmentOfTunes(tunes) {
  * alignment matches a block at any alignment, because applying it would leave
  * the block's own alignment alone.
  *
- * @param {object} fingerprint { tool, level?, color?, backgroundColor?, fontSize?, alignment? }
+ * @param {object} fingerprint { tool, level?, color?, backgroundColor?, fontSize?, styled?, alignment? }
+ *   `styled` is hasStyleMarkup over the block's markup — see the clear branch.
  */
 export function matchesFingerprint(preset, ground, fingerprint, doc = document) {
   const plan = resolve(preset, ground);
@@ -211,8 +241,13 @@ export function matchesFingerprint(preset, ground, fingerprint, doc = document) 
     return false;
   }
   if (plan.clear) {
-    // "None" is active exactly when there is nothing left for it to clear.
-    return !fingerprint.color && !fingerprint.backgroundColor && !fingerprint.fontSize;
+    // "None" is active exactly when there is nothing left for it to clear, and
+    // the three whole-block styles are not the whole story: a block where only
+    // one phrase is coloured has no whole-block colour at all, so on those
+    // three alone "None" would read as already applied on exactly the blocks it
+    // has the most work to do. `styled` is the check that catches them.
+    return !fingerprint.color && !fingerprint.backgroundColor && !fingerprint.fontSize
+      && !fingerprint.styled;
   }
   if (fingerprint.tool !== plan.tool) {
     return false;
@@ -243,6 +278,14 @@ function variantOf(raw) {
 // One island entry -> a preset, or null when it is not usable. Anything the
 // site gets wrong is dropped rather than half-applied: a preset that writes a
 // colour nobody chose is worse than a preset that is missing.
+//
+// `label` is kept as-is because it is PLAIN TEXT, not markup: every menu is
+// responsible for getting it into the DOM safely, and the one that hands it to
+// something rendering innerHTML escapes it there (see escapeHtml in ./index.js
+// — EditorJS renders a popover item's title with innerHTML). Sanitising the
+// label here instead would leave the next menu to get it wrong again, and would
+// mangle the perfectly ordinary ampersands and angle brackets a site is
+// entitled to put in one.
 function sanitisePreset(raw) {
   if (!raw || typeof raw.id !== 'string' || !raw.id || typeof raw.label !== 'string' || !raw.label) {
     return null;
