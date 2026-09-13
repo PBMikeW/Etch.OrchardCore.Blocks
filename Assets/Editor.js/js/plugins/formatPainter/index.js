@@ -88,7 +88,9 @@ function textFragments(saved) {
 // Mirrors conversionConfig.export of @editorjs/paragraph 2.11, header 2.8,
 // list 1.10 and quote 2.7 (a tool's exporter is not reachable through the
 // public API); re-check when those packages are upgraded.
-function rawExport(saved) {
+// Exported for ../textPreset, which converts block types for the same reason
+// and must mirror the same exporters — one copy to keep in step, not two.
+export function rawExport(saved) {
   const tool = saved.tool;
   const data = saved.data || {};
   if (tool === 'paragraph' || tool === 'header') {
