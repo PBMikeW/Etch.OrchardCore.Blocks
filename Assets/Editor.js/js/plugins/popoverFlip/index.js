@@ -130,9 +130,16 @@ function correctOne(popover) {
 
   const savedAnimation = container.style.animation;
   container.style.animation = 'none';
-  const down = probe(popover, container, false);
-  const up = probe(popover, container, true);
-  container.style.animation = savedAnimation;
+  let down;
+  let up;
+  try {
+    down = probe(popover, container, false);
+    up = probe(popover, container, true);
+  } finally {
+    // probe() toggles classes and forces layout; if any of that throws, the
+    // popover must not be left with its entry animation suppressed for good.
+    container.style.animation = savedAnimation;
+  }
 
   let top;
 

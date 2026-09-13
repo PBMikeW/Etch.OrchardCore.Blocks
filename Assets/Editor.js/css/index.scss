@@ -81,3 +81,32 @@ html[data-bs-theme='dark'] {
 .ce-popover {
   --max-height: min(80vh, 640px);
 }
+
+/**
+ * Flipped block-settings popover vs the widget header bar.
+ *
+ * The admin theme's content-block toolbar (`.widget-editor-header`) is
+ * `position: absolute; z-index: 15; pointer-events: auto`. A popover that
+ * opens DOWNWARD never reaches it, but one that flips UPWARD crosses the
+ * header of its own widget and the top 36px of the list - "Move up",
+ * "Delete" - end up behind it: hit-testing at those coordinates returns the
+ * header, so those clicks go nowhere.
+ *
+ * Raising the popover itself cannot fix it. Editor.js renders the popover
+ * inside `.codex-editor`, which is `position: relative; z-index: 1` and so
+ * is a stacking context: every z-index inside it is resolved against its
+ * siblings there, and the whole subtree still paints at 1 against the
+ * header's 15. The nearest common stacking context of the two is the root
+ * element, because `.widget-editor` is `position: relative; z-index: auto`.
+ * So the editor itself is what has to come up, and only while such a
+ * popover is open - `:has()`, already used throughout this admin CSS and
+ * the theme's flowpart-wysiwyg, keeps it to exactly that moment and lets it
+ * fall back the instant the popover closes.
+ *
+ * Global scope for the same reason as the rule above: Editor.js measures and
+ * positions a CLONE of the popover appended to `document.body`, outside any
+ * `.flow-grid .widget-editor` ancestor, so a scoped rule is invisible to it.
+ */
+.codex-editor:has(.ce-popover--open-top.ce-popover--opened) {
+  z-index: 20;
+}

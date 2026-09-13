@@ -69,9 +69,14 @@ export function isFormatWrapper(node) {
   if (!node || node.nodeType !== ELEMENT_NODE) return false;
   if (FORMAT_TAGS.indexOf(node.tagName) === -1) return false;
   if (node.tagName !== 'SPAN') return true;
-  if (node.getAttribute('style')) return true;
   const classes = (node.getAttribute('class') || '').split(/\s+/).filter(Boolean);
-  return classes.length > 0 && classes.every((c) => SIZE_CLASS.test(c));
+  // The class test comes first: any class outside the size set is furniture,
+  // and an inline style does not override that. A `.kb-button` span with
+  // padding on it is still a button, and the style test used to unwrap it.
+  // (every() on an empty list is true, so an unclassed span falls through to
+  // the style test below, which is what catches a pasted bare styled span.)
+  if (!classes.every((c) => SIZE_CLASS.test(c))) return false;
+  return classes.length > 0 || !!node.getAttribute('style');
 }
 
 function unwrap(el) {
@@ -252,8 +257,7 @@ export function clearFormatting(range, root) {
   const last = leaves[leaves.length - 1];
 
   leaves.forEach((leaf) => liftOutOfWrappers(leaf, root, covered));
-  // Wrappers the lift stepped over or never reached: one wholly inside a link,
-  // or one holding only an image.
+  // Wrappers the lift stepped over or never reached: one wholly inside a link.
   covered.forEach((el) => {
     if (el.parentNode && isFormatWrapper(el)) unwrap(el);
   });
