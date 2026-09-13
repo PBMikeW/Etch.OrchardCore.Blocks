@@ -56,6 +56,17 @@
  * 323px scroll, popover top ending at -204 in a 600px viewport). When a flip
  * has put the popover fully on screen that scroll is both unnecessary and
  * wrong, so the scroll position from the click that opened it is restored.
+ *
+ * The correction has to be rare and idempotent, not just correct. The first
+ * version of this file re-ran it on every `mouseover` inside the popover and
+ * restored the entry animation after each pass, which made the popover flash
+ * rapidly under the mouse: restoring the animation replays it from 0%, the
+ * replay moves the box, the browser re-hit-tests under the (stationary) cursor
+ * and fires the next mouseover. Measured in the harness at 92 corrections, 368
+ * attribute writes and 45 animation replays in 2.2 seconds with the mouse never
+ * moved. So: correct on the events that open or reshape a popover, never on
+ * mouse movement; write nothing when the popover is already right; and leave
+ * the entry animation alone unless it is still playing.
  */
 
 // Editor.js class and custom-property names (2.31.6).
@@ -75,26 +86,37 @@ const pendingRoots = new Set();
 // Where the page was when the popover was asked to open, so the browser's
 // scroll-the-search-field-into-view can be undone if a flip made it pointless.
 let pendingScroll = null;
-// Popover elements we have already wired for nested-submenu opens.
+// Popover elements whose subtree we are already observing for submenu opens.
 const watched = new WeakSet();
 
 /**
- * Measure the container's untransformed box with the popover forced to one
- * direction.
+ * Point the popover at one direction, writing the class only when it actually
+ * has to change.
  *
- * The `--opened` rule runs a 100ms `panelShowing` keyframe animation that
- * translates and scales the container, and we run one frame after the click —
- * while that animation is at ~0%, i.e. translateY(-8px) scale(.9). That would
- * skew every rect we read, so the caller suppresses the animation for the
- * duration of the probing (see correctOne).
+ * `classList.toggle(token, true)` re-serialises the class attribute even when
+ * the token is already there, which shows up as a real mutation record and
+ * costs a style recalc. A popover that is already in the right place has to
+ * cost nothing at all (see correctOne).
+ */
+function setDirection(popover, top) {
+  if (popover.classList.contains(OPEN_TOP) !== top) {
+    popover.classList.toggle(OPEN_TOP, top);
+  }
+}
+
+/**
+ * Measure the container's box with the popover pointed at one direction.
+ *
+ * The caller guarantees the entry animation is not moving the container while
+ * this runs, so the rect is the layout box (see correctOne).
  */
 function probe(popover, container, top) {
-  popover.classList.toggle(OPEN_TOP, top);
+  setDirection(popover, top);
+
   const r = container.getBoundingClientRect();
   const vh = window.innerHeight;
+
   return {
-    top: r.top,
-    bottom: r.bottom,
     fits: r.top >= MARGIN && r.bottom <= vh - MARGIN,
     // How much of the popover would actually be on screen. Used only when it
     // fits neither way, to pick the less bad side.
@@ -105,13 +127,18 @@ function probe(popover, container, top) {
 /**
  * Correct one opened popover's vertical direction against the viewport.
  *
- * Both directions are measured rather than predicted: open-top position is a
- * calc() over several custom properties, one of which (`--item-height`) is
- * itself an unresolved calc() that `getPropertyValue` hands back as a string,
- * and the nested submenus add `--trigger-item-top` on top of that. Toggling
- * the class and reading the rect is exact, works for root and nested popovers
- * alike, and costs two forced layouts inside a single animation frame — no
- * paint happens in between, so nothing flickers.
+ * Directions are measured rather than predicted: open-top position is a calc()
+ * over several custom properties, one of which (`--item-height`) is itself an
+ * unresolved calc() that `getPropertyValue` hands back as a string, and the
+ * nested submenus add `--trigger-item-top` on top of that. Pointing the class
+ * at a direction and reading the rect is exact and works for root and nested
+ * popovers alike.
+ *
+ * The direction Editor.js chose is measured first and kept whenever it works,
+ * which is the common case (a popover with room below it). That path writes
+ * nothing — no class, no custom property, no animation — so re-checking a
+ * settled popover is free and, more importantly, cannot feed back into
+ * whatever asked for the re-check.
  */
 function correctOne(popover) {
   const container = popover.querySelector(':scope > .ce-popover__container');
@@ -121,46 +148,103 @@ function correctOne(popover) {
   }
 
   // What Editor.js decided. Its choice is kept whenever it actually works, so
-  // this only ever corrects a popover that is off screen.
+  // this only ever moves a popover that is off screen.
   const wasTop = popover.classList.contains(OPEN_TOP);
 
-  // offsetHeight is layout height: unaffected by the entry animation's
-  // transform, unlike the rect.
-  popover.style.setProperty(HEIGHT_VAR, container.offsetHeight + 'px');
-
+  // The `--opened` rule runs a 100ms `panelShowing` keyframe animation that
+  // translates and scales the container, so a rect read while it plays is
+  // skewed (measured: 11px out, one frame after the click). Suppress it for
+  // the probes — but only while it is actually running, which is the single
+  // correction that happens a frame after the open.
+  //
+  // Putting the inline property back cancels the suppressed animation and
+  // re-applies the CSS one, which the browser treats as a brand new animation
+  // and replays from 0% — translateY(-8px) scale(.9), opacity 0. While the
+  // animation is genuinely still playing that replay IS the entry animation,
+  // just starting a frame late. Doing it to a popover that has finished
+  // animating is the flash. Once it has finished there is nothing to suppress
+  // and nothing to put back, so we touch neither.
+  //
+  // Element.getAnimations is Chrome 84+ / Firefox 75+ / Safari 13.1+; without
+  // it, fall back to suppressing unconditionally rather than measuring a box
+  // the animation is still moving.
+  const animating = container.getAnimations
+    ? container.getAnimations().some((a) => a.playState === 'running')
+    : true;
   const savedAnimation = container.style.animation;
-  container.style.animation = 'none';
-  let down;
-  let up;
+
+  if (animating) {
+    container.style.animation = 'none';
+  }
+
+  let top = wasTop;
+  let fits;
+
   try {
-    down = probe(popover, container, false);
-    up = probe(popover, container, true);
+    // --popover-height drives the open-top position, and Editor.js measured it
+    // from a clone appended to document.body — outside any `.flow-grid
+    // .widget-editor` ancestor, so a scoped override is invisible to it.
+    // Re-state it from the container we are about to move, before anything
+    // reads an open-top position off it. offsetHeight is layout height:
+    // unaffected by the entry animation's transform, unlike the rect.
+    const height = container.offsetHeight + 'px';
+
+    if (popover.style.getPropertyValue(HEIGHT_VAR) !== height) {
+      popover.style.setProperty(HEIGHT_VAR, height);
+    }
+
+    const current = probe(popover, container, wasTop);
+
+    fits = current.fits;
+
+    if (!fits) {
+      const other = probe(popover, container, !wasTop);
+
+      if (other.fits) {
+        top = !wasTop; // The other direction fits: flip.
+        fits = true;
+      } else {
+        // Fits neither way: the roomier side wins.
+        top = other.visible > current.visible ? !wasTop : wasTop;
+      }
+
+      setDirection(popover, top);
+    }
   } finally {
-    // probe() toggles classes and forces layout; if any of that throws, the
+    // The probes write classes and force layout; if any of that throws, the
     // popover must not be left with its entry animation suppressed for good.
-    container.style.animation = savedAnimation;
+    if (animating) {
+      container.style.animation = savedAnimation;
+    }
   }
 
-  let top;
-
-  if (wasTop ? up.fits : down.fits) {
-    top = wasTop; // Editor.js's direction is fine — leave it.
-  } else if (wasTop ? down.fits : up.fits) {
-    top = !wasTop; // The other direction fits: flip.
-  } else {
-    top = up.visible > down.visible; // Fits neither way: the roomier side wins.
-  }
-
-  popover.classList.toggle(OPEN_TOP, top);
-
-  return { flipped: top !== wasTop, fits: top ? up.fits : down.fits };
+  return { flipped: top !== wasTop, fits };
 }
 
 /**
  * The "Convert to" submenu is a second popover appended inside the parent
  * popover when its item is hovered or clicked, and it runs the same broken
- * direction check. Listen on the parent element itself (once) rather than on
- * document, so hovering anywhere else in the admin costs nothing.
+ * direction check, so it has to be corrected too.
+ *
+ * This used to listen for `mouseover` and `click` on the parent popover. The
+ * mouseover half is what made the popover flash: the correction replayed the
+ * entry animation, the replay moved the box, and the browser re-hit-tested
+ * under the unmoved cursor and fired the next mouseover — a loop, not a
+ * response to the mouse (see the note at the top of this file).
+ *
+ * A `childList` observer is loop-proof by construction: the correction only
+ * ever writes attributes (one class and one custom property), so it can never
+ * re-trigger this. Editor.js appends the submenu's element when it opens and
+ * removes it when another item's submenu replaces it — measured: exactly one
+ * record per submenu open, none while the mouse merely moves over the items.
+ * Re-hovering a submenu that is already open changes nothing in the DOM and
+ * needs no correction. Anything that reshapes an open popover in place — the
+ * toolbox search filtering its list, which only toggles item classes — arrives
+ * through the keydown listener instead.
+ *
+ * Never disconnected: the popover element lives as long as its editor, and the
+ * one spurious record when a closing popover tears its submenu down finds
+ * nothing open to correct.
  */
 function watchForNested(popover) {
   if (watched.has(popover)) {
@@ -169,10 +253,9 @@ function watchForNested(popover) {
 
   watched.add(popover);
 
-  const onNestedOpen = () => scheduleFix(popover.closest('.codex-editor'));
+  const observer = new MutationObserver(() => scheduleFix(popover.closest('.codex-editor')));
 
-  popover.addEventListener('mouseover', onNestedOpen);
-  popover.addEventListener('click', onNestedOpen);
+  observer.observe(popover, { childList: true, subtree: true });
 }
 
 function fixIn(root) {
@@ -207,8 +290,8 @@ function fixIn(root) {
 
 /**
  * Editor.js opens the popover synchronously inside its own click handler, so
- * one frame later it is open and laid out. Coalesce to a single frame: a hover
- * over the popover fires a stream of mouseover events.
+ * one frame later it is open and laid out. Coalesce to a single frame: held
+ * keys repeat, and a submenu open can arrive alongside a keystroke.
  */
 function scheduleFix(root) {
   if (!root) {
