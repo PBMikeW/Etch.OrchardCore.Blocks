@@ -22,12 +22,18 @@ import Breadcrumb from './plugins/breadcrumb';
 import { attachFormatPainter } from './plugins/formatPainter';
 import { attachUndo, recordChange } from './plugins/crossWidgetUndo';
 import { attachPopoverFlip } from './plugins/popoverFlip';
+import { attachPopoverAnchor } from './plugins/popoverAnchor';
 import { upgradeLegacyBlocks } from './plugins/utils/legacyMarkup';
 
 // Flip the block-toolbar popovers upward when they would open off the bottom
 // of the viewport. Page-wide and idempotent, so it is registered once here
 // rather than per editor instance.
 attachPopoverFlip();
+
+// Open the block-settings popover under the gear button when it is clicked,
+// and beside the block text when it is opened with Ctrl/Cmd + "/" (which has
+// no button to hang under). Page-wide and idempotent for the same reason.
+attachPopoverAnchor();
 
 window.initializeEditorJS = (
   tenantPath,
