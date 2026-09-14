@@ -34,6 +34,13 @@ export default class MediaLibraryTool {
     this.config = config || {};
 
         this.data = {
+            // The media path is what the published site renders from:
+            // ImageParser.GetMediaUrl() maps it through the media store and
+            // only falls back to `url` — preview query string and all — when
+            // it is missing. It has to survive a re-edit, and this constructor
+            // rebuilds `this.data` from scratch, so a block opened and saved
+            // again dropped the path and left the site on the fallback.
+            mediaPath: data.mediaPath || '',
             url: data.url || '',
             baseUrl: data.baseUrl || data.url,
             caption: data.caption || '',
@@ -237,10 +244,15 @@ export default class MediaLibraryTool {
      * visitor gets; the old `?width=N` was a max-width resize, which produced a
      * noticeably smaller image for anything that is not portrait.
      *
-     * Only the query string changes. The block still stores `baseUrl` (the
-     * unresized asset) and `profile` (the profile name) exactly as before, and
-     * the server-side parser discards the query anyway, so the stored data stays
-     * backward compatible with blocks saved by earlier versions.
+     * Only the query string changes. The block still stores `mediaPath` (the
+     * asset), `baseUrl` (the unresized URL) and `profile` (the profile name)
+     * exactly as before, so the stored data stays backward compatible with
+     * blocks saved by earlier versions. Nothing on the server reads this
+     * query: ImageParser renders from `mediaPath` when it is there, and the
+     * view (PropertyBrokersWeb.Theme/Views/Block-Image.cshtml) drops the query
+     * with Split('?')[0] before asking for the profile URL — the parser itself
+     * passes `url` through untouched, so a block that lost its `mediaPath`
+     * would reach the view with this preview query still attached.
      */
     _previewUrl(url, profileObject) {
         const baseUrl = (url || '').split('?')[0];
