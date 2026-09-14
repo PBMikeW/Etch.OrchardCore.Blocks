@@ -25,6 +25,7 @@ import { attachUndo, recordChange } from './plugins/crossWidgetUndo';
 import { attachPopoverFlip } from './plugins/popoverFlip';
 import { attachPopoverAnchor } from './plugins/popoverAnchor';
 import { upgradeLegacyBlocks } from './plugins/utils/legacyMarkup';
+import withScopedActiveState from './plugins/utils/colorActiveState';
 
 // Flip the block-toolbar popovers upward when they would open off the bottom
 // of the viewport. Page-wide and idempotent, so it is registered once here
@@ -95,13 +96,17 @@ window.initializeEditorJS = (
             // instead (its updateWrapper path re-adds the range and preserves the
             // selection). No-op surround leaves the palette open on A-click but
             // stops the caret jump. (Marker has no palette, so it keeps surround.)
-            class: class extends withDefaultConfig(TextColor, colorToolConfig) {
+            //
+            // withScopedActiveState: the plugin lights its button from any
+            // ancestor <span>, so the font-size tool's <span class="fontsize-tool">
+            // lit the highlighter. See ./plugins/utils/colorActiveState.
+            class: class extends withScopedActiveState(withDefaultConfig(TextColor, colorToolConfig)) {
                 surround() {}
             },
             config: colorToolConfig,
         },
         Marker: {
-            class: withDefaultConfig(TextColor, markerToolConfig),
+            class: withScopedActiveState(withDefaultConfig(TextColor, markerToolConfig)),
             config: markerToolConfig,
         },
         delimiter: Delimiter,
