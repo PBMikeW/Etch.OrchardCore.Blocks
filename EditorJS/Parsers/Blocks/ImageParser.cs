@@ -1,5 +1,6 @@
 using Etch.OrchardCore.Blocks.EditorJS.Parsers.Models;
 using Etch.OrchardCore.Blocks.ViewModels.Blocks;
+using Newtonsoft.Json.Linq;
 using System.Threading.Tasks;
 
 namespace Etch.OrchardCore.Blocks.EditorJS.Parsers.Blocks
@@ -13,13 +14,55 @@ namespace Etch.OrchardCore.Blocks.EditorJS.Parsers.Blocks
                 {
                     Alignment = block.Get("alignment", "center"),
                     Caption = block.Get("caption"),
-                    Profile = block.Get("profile"),
+                    Profile = GetProfile(block),
                     Stretched = block.Get("stretched", false),
                     Url = GetMediaUrl(context, block),
                     LinkUrl = block.Get("linkUrl"),
                     LinkNewTab = block.Get("linkNewTab", false),
                 }
             );
+        }
+
+        /// <summary>
+        /// Reads the media profile name from the block, accepting both shapes the
+        /// media library plugin has stored over its lifetime.
+        /// </summary>
+        /// <remarks>
+        /// The current plugin stores just the name, e.g. <c>"profile": "160x160"</c>.
+        /// An earlier version stored the whole profile object, e.g.
+        /// <c>"profile": { "name": "large", "icon": "&lt;svg…&gt;", "previewSize": 480 }</c>.
+        /// Calling ToString() on that yields the JSON text, which is not a media
+        /// profile, so the view fell through and served the unresized original.
+        /// </remarks>
+        private static string GetProfile(Block block)
+        {
+            if (!block.Has("profile"))
+            {
+                return string.Empty;
+            }
+
+            var value = block.Data["profile"];
+
+            if (value is JObject profile)
+            {
+                var name = profile.Value<string>("name");
+
+                if (!string.IsNullOrWhiteSpace(name))
+                {
+                    return name;
+                }
+
+                // No name to go on: the plugin's own profiles are all square and
+                // named after their preview size, so "480" means the "480x480"
+                // media profile.
+                var previewSize = profile.Value<int?>("previewSize");
+
+                return previewSize.HasValue && previewSize.Value > 0
+                    ? $"{previewSize.Value}x{previewSize.Value}"
+                    : string.Empty;
+            }
+
+            return value?.ToString() ?? string.Empty;
         }
 
         private string GetMediaUrl(BlockParserContext context, Block block)

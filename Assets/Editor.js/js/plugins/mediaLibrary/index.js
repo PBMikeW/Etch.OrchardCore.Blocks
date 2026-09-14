@@ -45,6 +45,18 @@ export default class MediaLibraryTool {
             linkNewTab: data.linkNewTab || false,
         };
 
+        // Blocks saved before the preview URL was aligned with the site still
+        // hold a `?width=N` max-width URL, so refresh the preview from the base
+        // URL. Guarded on the saved profile actually being one this plugin
+        // offers: only then is `?width=N&height=N&rmode=min` guaranteed to be
+        // what the site renders. Legacy blocks that stored the whole profile
+        // object are left alone.
+        const savedProfile = this.profiles.find(item => item.name === this.data.profile);
+
+        if (savedProfile && this.data.baseUrl) {
+            this.data.url = this._previewUrl(this.data.baseUrl, savedProfile);
+        }
+
     this.modalBodyElement = document.getElementById(
       `${config.id}-ModalBody`
     );
@@ -215,13 +227,37 @@ export default class MediaLibraryTool {
     }
 
     /**
+     * Builds the `src` used for the editor preview.
+     *
+     * The published site renders this block through AssetProfileUrlAsync with
+     * resizeMode Min (PropertyBrokersWeb.Theme/Views/Block-Image.cshtml), and
+     * every profile this plugin offers is a square NxN media profile, so the
+     * site asks the media middleware for `?width=N&height=N&rmode=min`.
+     * Requesting the same thing here makes the preview the same pixels the
+     * visitor gets; the old `?width=N` was a max-width resize, which produced a
+     * noticeably smaller image for anything that is not portrait.
+     *
+     * Only the query string changes. The block still stores `baseUrl` (the
+     * unresized asset) and `profile` (the profile name) exactly as before, and
+     * the server-side parser discards the query anyway, so the stored data stays
+     * backward compatible with blocks saved by earlier versions.
+     */
+    _previewUrl(url, profileObject) {
+        const baseUrl = (url || '').split('?')[0];
+        const previewSize = profileObject ? profileObject.previewSize : undefined;
+
+        if (!baseUrl || !previewSize) {
+            return url || '';
+        }
+
+        return `${baseUrl}?width=${previewSize}&height=${previewSize}&rmode=min`;
+    }
+
+    /**
      * Updates block with selected media item.
      */
     _setMedia(media) {
-        let url = media.url;
-        let baseUrl = url.split('?')[0];
-
-        url = baseUrl + '?width=' + this.data.profileObject.previewSize;
+        const url = this._previewUrl(media.url, this.data.profileObject);
 
         this.data = {
             caption: '',
@@ -268,7 +304,13 @@ export default class MediaLibraryTool {
     }
 
     get currentProfile() {
-        let profile = this.profiles.find(item => item.name === this.data.profile);
+        // Blocks saved by an earlier version of this plugin stored the whole
+        // profile object under `profile` instead of just its name.
+        const profileName = this.data.profile && typeof this.data.profile === 'object'
+            ? this.data.profile.name
+            : this.data.profile;
+
+        let profile = this.profiles.find(item => item.name === profileName);
 
         if (!profile) {
             profile = this.profiles[3];
@@ -278,10 +320,8 @@ export default class MediaLibraryTool {
     }
 
     setProfile(profileObject) {
-        let currentUrl = this.data.baseUrl !== undefined ? this.data.baseUrl : this.data.url;
-        let baseUrl = currentUrl.split('?')[0];
-
-        let url = baseUrl + '?width=' + profileObject.previewSize;
+        const currentUrl = this.data.baseUrl !== undefined ? this.data.baseUrl : this.data.url;
+        const url = this._previewUrl(currentUrl, profileObject);
 
         this.data = {
             ...this.data,
