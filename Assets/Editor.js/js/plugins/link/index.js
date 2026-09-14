@@ -224,7 +224,29 @@ export default class LinkTool {
             range.insertNode(this.placeholder);
         }
 
+        // A new link starts with an empty box. Emptying it here, on the way
+        // in, rather than on close — see the note in closeActions().
+        if (!this.inputOpened) {
+            this.setInputValue('');
+        }
+
         this.toggleActions();
+    }
+
+    /**
+     * Put a value in the URL box, but only when it actually changes.
+     *
+     * The box is permanently part of the inline toolbar's markup now, and a
+     * real write to an <input> that is in the document moves its caret, which
+     * fires `selectionchange` — the event Editor.js rebuilds the inline
+     * toolbar on. Writing the value the box already holds is silent.
+     */
+    setInputValue(value) {
+        if (this.nodes.input.value === value) {
+            return;
+        }
+
+        this.nodes.input.value = value;
     }
 
     checkState() {
@@ -233,7 +255,7 @@ export default class LinkTool {
         if (anchorTag) {
             this.nodes.button.classList.add(this.CSS.buttonActive);
             this.nodes.button.innerHTML = unlinkIcon;
-            this.nodes.input.value = anchorTag.getAttribute('href');
+            this.setInputValue(anchorTag.getAttribute('href') || '');
             this.state = anchorTag;
             this.openActions();
         } else {
@@ -270,7 +292,18 @@ export default class LinkTool {
             // Drop any horizontal nudge keepEditorOnScreen() applied, so the
             // next toolbar starts from the anchored position.
             this.nodes.editor.style.left = '';
-            this.nodes.input.value = '';
+            // The URL box is deliberately left as it is. Emptying an <input>
+            // that is in the document fires `selectionchange`, Editor.js
+            // rebuilds the inline toolbar on that, and with the caret inside
+            // an <a href> checkState() writes the href straight back in —
+            // clear, refill, clear. Measured in headless Chrome against these
+            // sources: a mousedown on the colour picker with the caret inside
+            // an existing link produced 4 selectionchange / 3 rebuilds and
+            // tore the palette out of the DOM mid-click, so the colour never
+            // landed, and Escape reached a toolbar that had been rebuilt out
+            // from under it (0 rebuilds with an empty href). Every open fills
+            // the box (checkState() with the href, surround() with ''), so
+            // nothing here needs to empty it.
             this.nodes.list.innerHTML = '';
         }
 
@@ -425,7 +458,15 @@ export default class LinkTool {
     }
 
     selectContentItem(event) {
-        const itemUrl = event.target.getAttribute('data-href');
+        // The anchor suggestions put <strong>/<small> inside the button, and a
+        // click landing on one of those has the attribute on its parent.
+        const target = event.target.closest('[data-href]');
+
+        if (!target) {
+            return;
+        }
+
+        const itemUrl = target.getAttribute('data-href');
 
         this.applyUrl(itemUrl);
         this.closeActions();
