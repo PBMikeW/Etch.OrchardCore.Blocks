@@ -60,14 +60,21 @@ export const FORMAT_TAGS = [
   'B', 'STRONG', 'I', 'EM', 'U', 'S', 'STRIKE', 'SUB', 'SUP', 'SMALL', 'BIG', 'TT',
 ];
 
+// The presentation half of that list: colour, highlight and size, and nothing
+// that carries meaning. Making a link resets a run to the site's own link look
+// (../link/index.js), and "reset" there means the three the toolbar can apply
+// - bold and italic are the author's words, not the link's styling, so they
+// stay. Remove-formatting still clears the whole of FORMAT_TAGS.
+export const STYLE_TAGS = ['FONT', 'MARK', 'SPAN'];
+
 // A SPAN is only a formatting wrapper when it carries presentation: an inline
 // style, or nothing but size classes. A span with any other class is editor or
 // theme furniture (the cdx-* chrome, a tool's own markup) and is left alone.
 const SIZE_CLASS = /^(fontsize-tool|editor-fs-[\w-]+)$/;
 
-export function isFormatWrapper(node) {
+function isWrapperOf(node, tags) {
   if (!node || node.nodeType !== ELEMENT_NODE) return false;
-  if (FORMAT_TAGS.indexOf(node.tagName) === -1) return false;
+  if (tags.indexOf(node.tagName) === -1) return false;
   if (node.tagName !== 'SPAN') return true;
   const classes = (node.getAttribute('class') || '').split(/\s+/).filter(Boolean);
   // The class test comes first: any class outside the size set is furniture,
@@ -79,7 +86,16 @@ export function isFormatWrapper(node) {
   return classes.length > 0 || !!node.getAttribute('style');
 }
 
-function unwrap(el) {
+export function isFormatWrapper(node) {
+  return isWrapperOf(node, FORMAT_TAGS);
+}
+
+// Colour / highlight / size only - see STYLE_TAGS.
+export function isStyleWrapper(node) {
+  return isWrapperOf(node, STYLE_TAGS);
+}
+
+export function unwrap(el) {
   const parent = el.parentNode;
   while (el.firstChild) parent.insertBefore(el.firstChild, el);
   parent.removeChild(el);
@@ -104,7 +120,7 @@ export function stripPresentation(el) {
  * formatting, then put `node` where the wrapper was:
  *   <font c>ab<X/>ef</font>  ->  <font c>ab</font><X/><font c>ef</font>
  */
-function splitAround(node, wrapper) {
+export function splitAround(node, wrapper) {
   const parent = wrapper.parentNode;
   if (node.previousSibling) {
     const before = wrapper.cloneNode(false);
@@ -230,7 +246,7 @@ function intersects(range, node) {
 }
 
 // Wrappers left holding nothing that renders (no text, no <br>, no <a>, no img).
-function isSpentWrapper(el) {
+export function isSpentWrapper(el) {
   if (!isFormatWrapper(el)) return false;
   if (el.textContent && el.textContent.length) return false;
   return !el.querySelector('br, img, a, input, hr');

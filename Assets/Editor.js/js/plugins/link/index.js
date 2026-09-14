@@ -1,4 +1,12 @@
 import './index.css';
+import {
+    FORMAT_TAGS,
+    isSpentWrapper,
+    isStyleWrapper,
+    splitAround,
+    stripPresentation,
+    unwrap,
+} from '../removeFormat/clearFormatting';
 
 const linkIcon = `<svg width="13" height="14" xmlns="http://www.w3.org/2000/svg">
 	<path d="M8.567 13.629c.728.464 1.581.65 2.41.558l-.873.873A3.722 3.722 0 1 1 4.84 9.794L6.694 7.94a3.722 3.722 0 0 1 5.256-.008L10.484 9.4a5.209 5.209 0 0 1-.017.016 1.625 1.625 0 0 0-2.29.009l-1.854 1.854a1.626 1.626 0 0 0 2.244 2.35zm2.766-7.358a3.722 3.722 0 0 0-2.41-.558l.873-.873a3.722 3.722 0 1 1 5.264 5.266l-1.854 1.854a3.722 3.722 0 0 1-5.256.008L9.416 10.5a5.2 5.2 0 0 1 .017-.016 1.625 1.625 0 0 0 2.29-.009l1.854-1.854a1.626 1.626 0 0 0-2.244-2.35z" transform="translate(-3.667 -2.7)" />
@@ -11,11 +19,59 @@ const unlinkIcon = `<svg width="16" height="18" viewBox="0 0 16 18" xmlns="http:
 
 const ENTER_KEY = 13;
 
+/**
+ * Drop the inline wrappers around `node` that are left holding nothing.
+ *
+ * `range.extractContents()` in surround() splits a wrapper at each end of the
+ * selection and leaves the emptied clone behind — linking a bold run from its
+ * first letter leaves a `<b></b>` in front of it — and it leaves zero-length
+ * text nodes at the boundaries, which then get cloned into shells of their own
+ * when a styling wrapper is split around the new link. Both are invisible in
+ * the editor and both save, so they are swept from the block here.
+ *
+ * Same rule the remove-formatting tool applies (isSpentWrapper), so nothing
+ * with text, a line break, a link or an image inside it is ever touched.
+ */
+function dropSpentWrappers(node) {
+    const scope = node && node.closest
+        ? node.closest('[contenteditable="true"]') || node
+        : node;
+
+    if (!scope || !scope.querySelectorAll) {
+        return;
+    }
+
+    // Zero-length text nodes first: they read as a previous/next sibling and
+    // are what turns a split into an empty wrapper in the first place.
+    scope.normalize();
+
+    Array.from(scope.querySelectorAll(FORMAT_TAGS.join(','))).forEach(el => {
+        if (el.parentNode && isSpentWrapper(el)) {
+            unwrap(el);
+        }
+    });
+}
+
 export default class LinkTool {
     static get isInline() {
         return true;
     }
 
+    /**
+     * NOT where a link's styling is decided.
+     *
+     * Editor.js merges every inline tool's `sanitize` config before it saves a
+     * block, and the font-size tool's config (../fontSize/index.js) already
+     * lists `a: true`, `font: true`, `mark: true` and `span: { class, style }`
+     * — so the sanitiser keeps colour, highlight and size both inside an <a>
+     * and around it, and would keep them whatever this config said. Measured
+     * against these sources: a run styled and then linked saved as
+     * `<font ...><mark ...><a href="/about-us">linked words</a></mark></font>`,
+     * with the sanitiser passing all of it through untouched.
+     *
+     * The reset that makes a new link look like a link is therefore done in
+     * the DOM, in applyUrl() -> resetStyling(), not here.
+     */
     static get sanitize() {
         return {
             a: {
@@ -265,25 +321,133 @@ export default class LinkTool {
     }
 
     applyUrl(url) {
+        // Correcting an existing link: only the href changes. checkState() put
+        // the anchor in `this.state` and its href in the box, and there is no
+        // placeholder because surround() never ran. This used to return here
+        // and do nothing at all — the URL box accepted a new address, Enter
+        // closed the toolbar, and the link still pointed at the old one.
+        //
+        // Nothing else is touched: the styling an editor applied *after* the
+        // link was made is theirs, and a reset belongs to creating a link, not
+        // to fixing its address.
         if (!this.placeholder) {
+            if (this.state) {
+                this.state.setAttribute('href', url);
+            }
+
             return;
         }
 
-        let link = document.createElement('a');
-        link.innerHTML = this.placeholder.innerText;
+        const link = document.createElement('a');
         link.href = url;
 
-        this.placeholder.parentNode.replaceChild(link, this.placeholder);
+        // The nodes, not the text. `link.innerHTML = placeholder.innerText`
+        // flattened everything inside the selection: bold and italic were
+        // thrown away (and their emptied <b></b> / <i></i> shells left behind
+        // in the block, where they saved), and a <br> came back as a literal
+        // newline, so a line break inside the linked run was lost.
+        while (this.placeholder.firstChild) {
+            link.appendChild(this.placeholder.firstChild);
+        }
 
+        const parent = this.placeholder.parentNode;
+
+        parent.replaceChild(link, this.placeholder);
         this.placeholder = null;
+
+        this.resetStyling(link);
+
+        dropSpentWrappers(link);
+    }
+
+    /**
+     * A new link starts from the site's own link look.
+     *
+     * Colour, highlight and size are cleared off the run that has just become
+     * a link — both the wrappers inside it and the ones around it — so the
+     * editor can see at a glance that the link is there. Owner's call, and the
+     * reason for it is the editing that follows: a link that still looks
+     * exactly like the styled text it was made from reads as "did that work?",
+     * and the answer is to re-select precisely those letters again. Restyling
+     * is the easy half — colour, size and highlight all apply to text inside
+     * an existing <a> — so the reset costs an editor one click to undo and
+     * saves them a fiddly re-selection when it is what they wanted.
+     *
+     * Bold, italic and line breaks are NOT styling in that sense: they are
+     * part of what the author wrote, so they come through the link untouched.
+     * See STYLE_TAGS in ../removeFormat/clearFormatting.js for the split.
+     *
+     * Wrappers *around* the link are split rather than dropped, so text either
+     * side of the new link keeps its own styling: linking three words out of a
+     * highlighted sentence leaves the rest of the sentence highlighted.
+     */
+    resetStyling(link) {
+        // Inside: unwrap, keeping the children (a <b> inside a <font> stays).
+        Array.from(link.querySelectorAll('font, mark, span')).forEach(el => {
+            if (el.parentNode && isStyleWrapper(el)) {
+                unwrap(el);
+            }
+        });
+
+        // The <a> itself: keep href / target / rel, drop any colour, face or
+        // size it carries (a link made inside remove-formatted markup, or one
+        // an editor had already styled and is now re-linking).
+        stripPresentation(link);
+
+        // Outside: split each styling wrapper around the link, stepping over
+        // an element we keep (a <b> holding nothing but this link) so a colour
+        // further out is still split.
+        const root = link.closest('[contenteditable="true"]');
+
+        if (!root) {
+            return;
+        }
+
+        // The boundaries extractContents() left behind are zero-length text
+        // nodes, and splitAround() clones a wrapper whenever the link has a
+        // sibling — so without this every split leaves an empty shell either
+        // side of the new link.
+        root.normalize();
+
+        let node = link;
+
+        for (;;) {
+            const parent = node.parentNode;
+
+            if (!parent || parent === root) {
+                return;
+            }
+
+            if (isStyleWrapper(parent)) {
+                splitAround(node, parent);
+                continue;
+            }
+
+            if (parent.childNodes.length === 1) {
+                node = parent;
+                continue;
+            }
+
+            return;
+        }
     }
 
     closeActions() {
+        // Cancelling a half-made link puts the text back exactly as it was.
+        // This used to rebuild the parent from a string —
+        // `parent.innerHTML = parent.innerHTML.replace(outerHTML, innerText)`
+        // — which threw away every tag inside the selection on the way past:
+        // opening the panel over bold text and clicking away left
+        // `<b></b>bold and ital<i></i>`, and it saved that way. Unwrapping the
+        // node moves the children out as they are.
         if (this.placeholder) {
-            this.placeholder.parentNode.innerHTML = this.placeholder.parentNode.innerHTML.replace(
-                this.placeholder.outerHTML,
-                this.placeholder.innerText
-            );
+            const parent = this.placeholder.parentNode;
+
+            if (parent) {
+                unwrap(this.placeholder);
+                dropSpentWrappers(parent);
+            }
+
             this.placeholder = null;
         }
 
@@ -449,10 +613,17 @@ export default class LinkTool {
             return;
         }
 
-        this.state.parentNode.innerHTML = this.state.parentNode.innerHTML.replace(
-            this.state.outerHTML,
-            this.state.innerText
-        );
+        // Unwrap the anchor and keep what is inside it. The same string
+        // rebuild as in closeActions() used to run here, so unlinking threw
+        // away the colour, size and highlight the editor had applied to the
+        // link — work that is not recoverable by retyping the text. Making a
+        // link resets styling (see resetStyling); taking one away does not.
+        const parent = this.state.parentNode;
+
+        if (parent) {
+            unwrap(this.state);
+            dropSpentWrappers(parent);
+        }
 
         this.state = null;
     }
