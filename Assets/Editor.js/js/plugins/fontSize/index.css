@@ -1,5 +1,13 @@
-﻿.fontsize-actions {
-    display: none; 
+﻿/* The tool is one toolbar item: the icon button with the size stepper beside
+   it. The stepper used to be a nested popover under the toolbar, which sat on
+   top of the colour tool's palette — see the note on render() in ./index.js. */
+.fontsize-control {
+    display: flex;
+    align-items: center;
+}
+
+.fontsize-actions {
+    display: none;
     align-items: center;
     justify-content: center;
     padding: 0 6px;

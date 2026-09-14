@@ -26,6 +26,7 @@ import { attachPopoverFlip } from './plugins/popoverFlip';
 import { attachPopoverAnchor } from './plugins/popoverAnchor';
 import { upgradeLegacyBlocks } from './plugins/utils/legacyMarkup';
 import withScopedActiveState from './plugins/utils/colorActiveState';
+import withScopedSurround from './plugins/utils/colorSurroundScope';
 
 // Flip the block-toolbar popovers upward when they would open off the bottom
 // of the viewport. Page-wide and idempotent, so it is registered once here
@@ -100,13 +101,18 @@ window.initializeEditorJS = (
             // withScopedActiveState: the plugin lights its button from any
             // ancestor <span>, so the font-size tool's <span class="fontsize-tool">
             // lit the highlighter. See ./plugins/utils/colorActiveState.
-            class: class extends withScopedActiveState(withDefaultConfig(TextColor, colorToolConfig)) {
+            //
+            // withScopedSurround: and it *unwraps* any ancestor <span> before
+            // applying, which threw that font size away. Dead code here while
+            // surround() is a no-op, applied for the same reason the marker
+            // needs it. See ./plugins/utils/colorSurroundScope.
+            class: class extends withScopedSurround(withScopedActiveState(withDefaultConfig(TextColor, colorToolConfig))) {
                 surround() {}
             },
             config: colorToolConfig,
         },
         Marker: {
-            class: withScopedActiveState(withDefaultConfig(TextColor, markerToolConfig)),
+            class: withScopedSurround(withScopedActiveState(withDefaultConfig(TextColor, markerToolConfig))),
             config: markerToolConfig,
         },
         delimiter: Delimiter,
