@@ -30,6 +30,7 @@ export default class LinkTool {
         this.state = false;
 
         this.nodes = {
+            control: null,
             button: null,
             editor: null,
             input: null,
@@ -48,9 +49,12 @@ export default class LinkTool {
             button: 'ce-inline-tool',
             buttonActive: 'ce-inline-tool--active',
             buttonModifier: 'ce-inline-tool--link',
+            control: 'link-tool-control',
+            editor: 'link-tool-editor',
             editorActive: 'link-tool-editor--active',
             input: 'ce-inline-tool-input',
             inputShowed: 'ce-inline-tool-input--showed',
+            list: 'link-tool-editor__content-items',
         };
     }
 
@@ -58,65 +62,150 @@ export default class LinkTool {
         this.closeActions();
     }
 
+    /**
+     * The whole tool — icon button plus URL panel — is ONE element.
+     *
+     * It used to hand the panel back from `renderActions()`, and Editor.js
+     * turns that into a NESTED POPOVER on the tool's inline-toolbar item,
+     * opened automatically whenever `checkState()` returns true. That popover
+     * (`.ce-popover--nested-level-1`, z-index 4) fills the band directly under
+     * the toolbar, which is exactly where `editorjs-text-color-plugin` opens
+     * its palette — and the palette's vendored `<xy-popover>` stops click
+     * propagation, so Editor.js never got the click that would have closed the
+     * nested popover. Measured in headless Chrome against these sources: open
+     * the link panel, then the colour picker, and the palette opened UNDER the
+     * still-open URL box — 5952 px² of overlap with `input.ce-inline-tool-input`
+     * on top, so every swatch click landed in the URL box instead.
+     *
+     * The nested popover cost the content too. `PopoverInline.handleItemClick`
+     * closes an open nested popover by calling
+     * `nestedPopoverTriggerItem.handleClick()`, and for an inline tool that *is*
+     * its activation — so clicking any other tool re-ran this tool's
+     * `surround()` first. With a link half-typed that meant surround() wrapping
+     * the selection in a SECOND blue placeholder span and overwriting
+     * `this.placeholder`, so the close that followed unwrapped only the new one:
+     * traced here, clicking Bold with the URL box open left
+     * `<span style="background-color: rgb(168, 214, 255)">sentence</span>`
+     * in the block, and it saved that way.
+     *
+     * Keeping the panel inside our own element means no children, no nested
+     * popover, and neither failure — the same shape the font-size tool's
+     * stepper uses (see ../fontSize/index.js).
+     */
     render() {
         this.nodes.button = document.createElement('button');
         this.nodes.button.type = 'button';
         this.nodes.button.classList.add(this.CSS.button);
         this.nodes.button.innerHTML = linkIcon;
 
-        return this.nodes.button;
+        this.nodes.control = document.createElement('div');
+        this.nodes.control.classList.add(this.CSS.control);
+        this.nodes.control.appendChild(this.nodes.button);
+        this.nodes.control.appendChild(this.renderEditor());
+
+        return this.nodes.control;
     }
 
-    renderActions() {
+    /**
+     * The URL box and its results list. Deliberately NOT called
+     * `renderActions`: that name is Editor.js's hook for a nested popover, and
+     * this tool must not have one (see render()).
+     *
+     * The built panel is cached on the class and reused. Editor.js rebuilds the
+     * inline toolbar on every selection change, and this panel is now in the
+     * toolbar's markup from the moment it is built rather than only while a
+     * nested popover is open — so a *fresh* <input> would be inserted into the
+     * document on every rebuild, each insertion firing `selectionchange`, which
+     * schedules the next rebuild, which builds the next input. The font-size
+     * stepper measured that as a rebuild every ~200ms that never settles, and
+     * the churn tore the colour palette out of the DOM mid-click. One element,
+     * moved between toolbars, has none of that.
+     */
+    renderEditor() {
+        if (this.constructor.editorElement) {
+            this.nodes.editor = this.constructor.editorElement;
+            this.nodes.input = this.nodes.editor.querySelector(`.${this.CSS.input}`);
+            this.nodes.list = this.nodes.editor.querySelector(`.${this.CSS.list}`);
+
+            // Rebind: the cached handlers close over the previous tool instance.
+            this.bindEditor();
+
+            return this.nodes.editor;
+        }
+
         this.nodes.editor = document.createElement('div');
-        this.nodes.editor.classList.add('link-tool-editor');
+        this.nodes.editor.classList.add(this.CSS.editor);
 
         this.nodes.input = document.createElement('input');
         this.nodes.input.placeholder = 'Type link, search by title, or #anchor';
         this.nodes.input.classList.add(this.CSS.input);
         this.nodes.input.classList.add(this.CSS.inputShowed);
-        this.nodes.input.addEventListener('keydown', event => {
-            if (event.keyCode === ENTER_KEY) {
-                this.enterPressed(event);
-                return;
-            }
-        });
-
-        this.nodes.input.addEventListener('keyup', event => {
-            const _this = this;
-
-            if (event.keyCode === ENTER_KEY) {
-                return;
-            }
-
-            const value = this.nodes.input.value;
-
-            // When input starts with #, search for anchors in the current article
-            if (value.startsWith('#')) {
-                const query = value.substring(1).toLowerCase();
-                const anchors = _this._findAnchorsInEditors(query);
-                _this._displayAnchors(anchors);
-                return;
-            }
-
-            if (value.length > 2) {
-                fetch(
-                    `${this.config.tenantPath}/Blocks/SearchContentItems?type=${this.config.typeName}&part=${this.config.partName}&field=${this.config.fieldName}&query=${value}`
-                )
-                    .then(response => response.json())
-                    .then(contentItems =>
-                        _this.displayContentItems(contentItems)
-                    );
-            }
-        });
-
-        this.nodes.editor.appendChild(this.nodes.input);
 
         this.nodes.list = document.createElement('ul');
-        this.nodes.list.classList.add('link-tool-editor__content-items');
+        this.nodes.list.classList.add(this.CSS.list);
+
+        this.nodes.editor.appendChild(this.nodes.input);
         this.nodes.editor.appendChild(this.nodes.list);
 
+        this.bindEditor();
+
+        this.constructor.editorElement = this.nodes.editor;
+
         return this.nodes.editor;
+    }
+
+    /**
+     * Point the cached panel's handlers at this instance. Called on every
+     * render because the panel outlives the tool instance that built it, and
+     * assigned as `on*` properties rather than added as listeners so a rebuild
+     * replaces the previous instance's handlers instead of stacking on them.
+     */
+    bindEditor() {
+        this.nodes.input.onkeydown = event => {
+            if (event.keyCode === ENTER_KEY) {
+                this.enterPressed(event);
+            }
+        };
+
+        this.nodes.input.onkeyup = event => {
+            if (event.keyCode === ENTER_KEY) {
+                return;
+            }
+
+            this.search(this.nodes.input.value);
+        };
+
+        // Editor.js activates a tool when anything inside the tool's element is
+        // clicked (Popover.getTargetItem walks the composed path), and
+        // activating this one toggles the link off or throws the URL box away.
+        // The panel now lives inside that element, so its clicks stop here —
+        // the same trick the colour plugin's own picker uses.
+        this.nodes.editor.onclick = event => {
+            event.stopPropagation();
+        };
+    }
+
+    /**
+     * Suggestions for what has been typed: anchors in the open editors for a
+     * leading #, otherwise content items from the site.
+     */
+    search(value) {
+        // When input starts with #, search for anchors in the current article
+        if (value.startsWith('#')) {
+            const query = value.substring(1).toLowerCase();
+
+            this._displayAnchors(this._findAnchorsInEditors(query));
+
+            return;
+        }
+
+        if (value.length > 2) {
+            fetch(
+                `${this.config.tenantPath}/Blocks/SearchContentItems?type=${this.config.typeName}&part=${this.config.partName}&field=${this.config.fieldName}&query=${value}`
+            )
+                .then(response => response.json())
+                .then(contentItems => this.displayContentItems(contentItems));
+        }
     }
 
     surround(range) {
@@ -178,9 +267,14 @@ export default class LinkTool {
 
         if (this.nodes.editor) {
             this.nodes.editor.classList.remove(this.CSS.editorActive);
+            // Drop any horizontal nudge keepEditorOnScreen() applied, so the
+            // next toolbar starts from the anchored position.
+            this.nodes.editor.style.left = '';
             this.nodes.input.value = '';
             this.nodes.list.innerHTML = '';
         }
+
+        this.stopWatchingOutside();
 
         this.inputOpened = false;
     }
@@ -228,11 +322,93 @@ export default class LinkTool {
     openActions(needFocus) {
         this.nodes.editor.classList.add(this.CSS.editorActive);
 
+        // Measure now for the button-click path, where the toolbar is already
+        // laid out, and again next frame for the checkState() path, which opens
+        // the panel while the toolbar is still being built and not yet placed.
+        this.keepEditorOnScreen();
+        requestAnimationFrame(() => {
+            if (this.nodes.editor.classList.contains(this.CSS.editorActive)) {
+                this.keepEditorOnScreen();
+            }
+        });
+
+        this.watchOutside();
+
         if (needFocus) {
             this.nodes.input.focus();
         }
 
         this.inputOpened = true;
+    }
+
+    /**
+     * The panel hangs off the tool's own button, and that button can be at the
+     * right-hand end of the toolbar: the inline toolbar is `width: max-content`,
+     * so nothing pulls a 280px panel back on screen. Measure once it is showing
+     * and slide it left by exactly the overshoot.
+     */
+    keepEditorOnScreen() {
+        const margin = 8;
+
+        this.nodes.editor.style.left = '';
+
+        const rect = this.nodes.editor.getBoundingClientRect();
+
+        // Not in the document yet (or hidden): nothing to measure.
+        if (!rect.width) {
+            return;
+        }
+
+        const overshoot = rect.right - (window.innerWidth - margin);
+
+        if (overshoot > 0) {
+            // Never past the left edge — a panel wider than the viewport keeps
+            // its left end visible rather than losing both.
+            this.nodes.editor.style.left = `${-Math.min(overshoot, rect.left - margin)}px`;
+        }
+    }
+
+    /**
+     * Close the panel when the next interaction is somewhere else.
+     *
+     * Without this the panel stays open over whatever the next tool shows: the
+     * colour palette opens into the same band under the toolbar, and both would
+     * be on screen at once. Editor.js cannot do it for us — the panel is no
+     * longer one of its popovers.
+     */
+    watchOutside() {
+        // One panel on the page means one listener; drop whatever a previous
+        // tool instance left registered before adding this instance's.
+        this.stopWatchingOutside();
+
+        const handler = event => {
+            const path = event.composedPath ? event.composedPath() : [event.target];
+
+            if (this.nodes.control && path.includes(this.nodes.control)) {
+                return;
+            }
+
+            this.closeActions();
+        };
+
+        // Capture phase, and mousedown: the colour plugin's vendored
+        // <xy-popover> stops propagation on its own clicks, so a bubbling
+        // listener would never hear the palette being opened.
+        document.addEventListener('mousedown', handler, true);
+
+        this.constructor.outsideListener = handler;
+    }
+
+    stopWatchingOutside() {
+        const handler = this.constructor.outsideListener;
+
+        if (!handler) {
+            return;
+        }
+
+        document.removeEventListener('mousedown', handler, true);
+
+        this.constructor.outsideListener = null;
     }
 
     removeLink() {
