@@ -30,6 +30,7 @@ export default class FontSizeTool {
     this.state = false;
 
     this.nodes = {
+      control: null,
       actions: null,
       input: null,
     };
@@ -45,6 +46,7 @@ export default class FontSizeTool {
     };
 
     this.CSS = {
+      control: 'fontsize-control',
       button: 'ce-inline-tool',
       buttonActive: 'ce-inline-tool--active',
       actions: 'fontsize-actions',
@@ -55,6 +57,32 @@ export default class FontSizeTool {
     };
   }
 
+  /**
+   * The whole tool — icon button plus size stepper — is ONE element.
+   *
+   * It used to hand the stepper back from `renderActions()`, and that is what
+   * broke the colour tools. Editor.js turns a `renderActions()` panel into a
+   * nested popover under the inline toolbar, opened automatically whenever
+   * `checkState()` returns true — i.e. whenever the selection sits in a
+   * `span.fontsize-tool`. Two things followed from that, both measured in
+   * headless Chrome against these sources:
+   *
+   *   1. The nested popover (`.ce-popover--nested-level-1`, z-index 4) covers
+   *      the band directly under the toolbar, which is exactly where the
+   *      colour plugin's palette opens. Every swatch click landed on the
+   *      stepper instead, so colour could not be applied to text that already
+   *      had a size: nothing happened and the markup was unchanged.
+   *   2. `PopoverInline.handleItemClick` closes an open nested popover by
+   *      calling `nestedPopoverTriggerItem.handleClick()`, and for an inline
+   *      tool that *is* its activation — so clicking any other tool re-ran
+   *      this tool's `surround()` first and toggled the size off. That is why
+   *      the highlighter, and even the colour button, silently dropped the
+   *      font size.
+   *
+   * Keeping the stepper inside our own element means no children, no nested
+   * popover, and neither failure. It is the same shape the colour plugin uses
+   * for its own palette trigger.
+   */
   render() {
     this.button = document.createElement('button');
     this.button.type = 'button';
@@ -64,22 +92,34 @@ export default class FontSizeTool {
   <path d="M17,12 L17,17 L17.5,17 C17.7761424,17 18,17.2238576 18,17.5 C18,17.7761424 17.7761424,18 17.5,18 L15.5,18 C15.2238576,18 15,17.7761424 15,17.5 C15,17.2238576 15.2238576,17 15.5,17 L16,17 L16,12 L14,12 L14,12.5 C14,12.7761424 13.7761424,13 13.5,13 C13.2238576,13 13,12.7761424 13,12.5 L13,11.5 C13,11.2238576 13.2238576,11 13.5,11 L19.5,11 C19.7761424,11 20,11.2238576 20,11.5 L20,12.5 C20,12.7761424 19.7761424,13 19.5,13 C19.2238576,13 19,12.7761424 19,12.5 L19,12 L17,12 Z M10,6 L10,17 L11.5,17 C11.7761424,17 12,17.2238576 12,17.5 C12,17.7761424 11.7761424,18 11.5,18 L7.5,18 C7.22385763,18 7,17.7761424 7,17.5 C7,17.2238576 7.22385763,17 7.5,17 L9,17 L9,6 L5,6 L5,7.5 C5,7.77614237 4.77614237,8 4.5,8 C4.22385763,8 4,7.77614237 4,7.5 L4,5.5 C4,5.22385763 4.22385763,5 4.5,5 L14.5,5 C14.7761424,5 15,5.22385763 15,5.5 L15,7.5 C15,7.77614237 14.7761424,8 14.5,8 C14.2238576,8 14,7.77614237 14,7.5 L14,6 L10,6 Z"/>
 </svg>`
 
-    return this.button;
+    this.nodes.control = document.createElement('div');
+    this.nodes.control.classList.add(this.CSS.control);
+    this.nodes.control.appendChild(this.button);
+    this.nodes.control.appendChild(this.renderStepper());
+
+    return this.nodes.control;
   }
 
-  renderActions() {
-    // Check if we have a cached action panel from a previous instance - Stops potential looping issues
-    if (this.constructor.actionsElement) {
-      this.nodes.actions = this.constructor.actionsElement;
+  /**
+   * The −/value/+ stepper. Deliberately NOT called `renderActions`: that name
+   * is Editor.js's hook for a nested popover, and this tool must not have one
+   * (see render()).
+   *
+   * The built stepper is cached and reused — the original code's "stops
+   * potential looping issues". Editor.js rebuilds the inline toolbar on every
+   * selection change, and inserting a *fresh* <input> fires `selectionchange`,
+   * which schedules the next rebuild, which builds the next input: measured
+   * here as a rebuild every ~200ms that never settles, and it tore the colour
+   * palette out of the DOM mid-click. The <button>s and the wrapper can be
+   * rebuilt freely; only the input has to be the same node each time.
+   */
+  renderStepper() {
+    if (this.constructor.stepperElement) {
+      this.nodes.actions = this.constructor.stepperElement;
       this.nodes.input = this.nodes.actions.querySelector(`.${this.CSS.input}`);
 
-      const buttons = this.nodes.actions.querySelectorAll('button');
-      buttons[0].onmousedown = (e) => { e.preventDefault(); this.updateFontSize(-1); };
-      buttons[1].onmousedown = (e) => { e.preventDefault(); this.updateFontSize(1); };
-      buttons[0].onclick = null;
-      buttons[1].onclick = null;
-
-      this.nodes.input.onchange = (e) => { this.setFontSize(e.target.value); };
+      // Rebind: the cached handlers close over the previous tool instance.
+      this.bindStepper(this.nodes.actions.querySelectorAll(`.${this.CSS.btn}`));
 
       return this.nodes.actions;
     }
@@ -87,34 +127,51 @@ export default class FontSizeTool {
     this.nodes.actions = document.createElement('div');
     this.nodes.actions.classList.add(this.CSS.actions);
 
-    // Decremant Button
+    // Decrement Button
     const minus = document.createElement('button');
     minus.classList.add(this.CSS.btn);
     minus.type = 'button';
     minus.innerHTML = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4"><path d="M5 12h14"/></svg>';
-    minus.onmousedown = (e) => { e.preventDefault(); this.updateFontSize(-1); };
 
     // Display Input
     this.nodes.input = document.createElement('input');
     this.nodes.input.classList.add(this.CSS.input);
     this.nodes.input.value = this.config.default;
-    this.nodes.input.onchange = (e) => { this.setFontSize(e.target.value); };
 
     // Increment Button
     const plus = document.createElement('button');
     plus.classList.add(this.CSS.btn);
     plus.type = 'button';
     plus.innerHTML = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4"><path d="M12 5v14M5 12h14"/></svg>';
-    plus.onmousedown = (e) => { e.preventDefault(); this.updateFontSize(1); };
 
     this.nodes.actions.appendChild(minus);
     this.nodes.actions.appendChild(this.nodes.input);
     this.nodes.actions.appendChild(plus);
 
-    // Cache element to prevent looping issues
-    this.constructor.actionsElement = this.nodes.actions;
+    this.bindStepper([minus, plus]);
+
+    this.constructor.stepperElement = this.nodes.actions;
 
     return this.nodes.actions;
+  }
+
+  /**
+   * Point the stepper's handlers at this instance. Called on every render
+   * because the cached element outlives the tool instance that built it.
+   */
+  bindStepper(buttons) {
+    // mousedown, and preventDefault: the toolbar must not take focus off the
+    // text, or there is no selection left to resize.
+    buttons[0].onmousedown = (e) => { e.preventDefault(); this.updateFontSize(-1); };
+    buttons[1].onmousedown = (e) => { e.preventDefault(); this.updateFontSize(1); };
+    this.nodes.input.onchange = (e) => { this.setFontSize(e.target.value); };
+
+    // Editor.js activates a tool when anything inside the tool's element is
+    // clicked (Popover.getTargetItem walks the composed path), and activating
+    // this one toggles the size off. The stepper now lives inside that
+    // element, so its clicks must stop there — the same trick the colour
+    // plugin's own picker uses.
+    this.nodes.actions.onclick = (e) => { e.stopPropagation(); };
   }
 
   surround(range) {
