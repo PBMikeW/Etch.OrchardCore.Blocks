@@ -146,7 +146,14 @@ window.initializeEditorJS = (
                 preserveBlank: true,
             },
         },
-        quote: Quote,
+        // With the inline toolbar the quote tool merges the inline tools'
+        // sanitiser rules, so bold, links and colour survive save inside a
+        // quote (without it every inline tag was stripped on save, which made
+        // text presets a silent no-op on quotes).
+        quote: {
+            class: Quote,
+            inlineToolbar: true,
+        },
         raw: Raw,
         table: {
             class: Table,
