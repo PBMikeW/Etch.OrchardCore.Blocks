@@ -1,5 +1,6 @@
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Settings;
 using OrchardCore.Data.Migration;
@@ -16,10 +17,12 @@ namespace Etch.OrchardCore.Blocks
     public class Migrations : DataMigration
     {
         private readonly IContentDefinitionManager _contentDefinitionManager;
+        private readonly ILogger<Migrations> _logger;
 
-        public Migrations(IContentDefinitionManager contentDefinitionManager)
+        public Migrations(IContentDefinitionManager contentDefinitionManager, ILogger<Migrations> logger)
         {
             _contentDefinitionManager = contentDefinitionManager;
+            _logger = logger;
         }
 
         public async Task<int> CreateAsync()
@@ -33,7 +36,7 @@ namespace Etch.OrchardCore.Blocks
             );
 
             // Skip to latest version on fresh installs
-            return 5;
+            return 6;
         }
 
         // Previously created Container content type - no longer needed but keeping
@@ -115,6 +118,39 @@ namespace Etch.OrchardCore.Blocks
             );
 
             return 5;
+        }
+
+        public async Task<int> UpdateFrom5Async()
+        {
+            // Give containers a background, so a Container dropped into a News
+            // article can be a colour block or sit on an image. This reuses the
+            // banners' BackgroundInfo part (BackgroundMedia = mobile/default
+            // image, BackgroundMediaDesktop, UseOverlay, BackgroundContrast,
+            // BackgroundColor predefined list) rather than inventing a second
+            // set of fields, so the desktop/mobile semantics and the brand
+            // palette stay shared with every other backgrounded type.
+            //
+            // BackgroundInfo is a site-defined dynamic part, like
+            // ContentBlockStyling above, so it is attached by name and not
+            // created here. Unlike the attach above this one is guarded:
+            // WithPart on a name that has no part definition would silently
+            // create an empty part, and a tenant that does not define
+            // BackgroundInfo should get nothing rather than a hollow one.
+            // Attaching is otherwise idempotent.
+            var backgroundInfo = await _contentDefinitionManager.GetPartDefinitionAsync("BackgroundInfo");
+            if (backgroundInfo == null)
+            {
+                _logger.LogInformation("Skipping BackgroundInfo attach to Container: this tenant has no BackgroundInfo part definition.");
+                return 6;
+            }
+
+            await _contentDefinitionManager.AlterTypeDefinitionAsync("Container", type => type
+                .WithPart("BackgroundInfo", part => part
+                    .WithPosition("3")
+                )
+            );
+
+            return 6;
         }
     }
 }
