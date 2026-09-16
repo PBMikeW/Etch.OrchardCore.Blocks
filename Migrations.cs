@@ -140,7 +140,12 @@ namespace Etch.OrchardCore.Blocks
             var backgroundInfo = await _contentDefinitionManager.GetPartDefinitionAsync("BackgroundInfo");
             if (backgroundInfo == null)
             {
-                _logger.LogInformation("Skipping BackgroundInfo attach to Container: this tenant has no BackgroundInfo part definition.");
+                // Warning, not information: this is a permanent skip. The migration
+                // records version 6 either way, so if the tenant defines
+                // BackgroundInfo later this step will never run again and containers
+                // there will stay without a background until a new UpdateFrom6Async
+                // attaches it.
+                _logger.LogWarning("Skipping BackgroundInfo attach to Container permanently: this tenant has no BackgroundInfo part definition. The migration still records version 6, so defining the part later will not attach it - that would need a new UpdateFrom6Async.");
                 return 6;
             }
 
