@@ -1,0 +1,39 @@
+@{
+    // The module ships no front-end stylesheet, so size, colour and alignment
+    // are written as inline styles the way the other block views do it. The
+    // block-icon classes are there for a theme that wants to restyle them.
+    //
+    // The icon itself comes from the module's sprite; the symbols paint with
+    // currentColor, so an icon with no colour of its own takes the surrounding
+    // text colour.
+    bool hasIcon = Model.HasIcon;
+    string sizeKey = Model.SizeKey;
+    string alignment = Model.AlignmentKey;
+    string justify = Model.Justify;
+
+    string iconMarkup = null;
+    if (hasIcon)
+    {
+        string symbolId = Model.IconSymbolId;
+        string spriteHref = System.Net.WebUtility.HtmlEncode(
+            Url.Content("~/Etch.OrchardCore.Blocks/assets/heroicons.svg") + "#" + symbolId);
+        string size = Model.SizeCss;
+        string color = Model.SafeColor;
+        string colorStyle = color == null ? string.Empty : $" color: {color};";
+        iconMarkup = $"<svg class=\"block-icon__svg\" width=\"{size}\" height=\"{size}\" style=\"display: block;{colorStyle}\" aria-hidden=\"true\" focusable=\"false\"><use href=\"{spriteHref}\"></use></svg>";
+    }
+}
+
+@if (hasIcon)
+{
+    <div class="block-icon block-icon--@sizeKey block-icon--@alignment" style="display: flex; justify-content: @justify">
+        @if (Model.HasLink)
+        {
+            <a href="@Model.LinkUrl" class="block-icon__link"@(Model.LinkNewTab ? Html.Raw(" target=\"_blank\" rel=\"noopener noreferrer\"") : null)>@Html.Raw(iconMarkup)</a>
+        }
+        else
+        {
+            @Html.Raw(iconMarkup)
+        }
+    </div>
+}

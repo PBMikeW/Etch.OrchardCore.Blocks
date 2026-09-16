@@ -1,0 +1,81 @@
+.icon-tool {
+  position: relative;
+  padding: 6px 0;
+}
+
+.icon-tool__preview {
+  display: flex;
+  align-items: center;
+  min-height: 32px;
+  cursor: pointer;
+}
+
+.icon-tool__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Before an icon is picked the block would be an invisible empty box, so it
+   says what to do instead. */
+.icon-tool__icon--empty {
+  border: 1px dashed #ccc;
+  border-radius: 4px;
+  padding: 6px 10px;
+  color: #999;
+  font-size: 13px;
+}
+
+/* ── Settings panel ───────────────────────── */
+.icon-tool__popover {
+  display: none;
+  margin-top: 8px;
+  padding: 10px;
+  border: 1px solid #e8e8eb;
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.icon-tool__popover--open {
+  display: block;
+}
+
+.icon-tool__field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.icon-tool__field > label {
+  flex: 0 0 110px;
+  font-size: 13px;
+  color: #707684;
+}
+
+.icon-tool__field input[type='text'] {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 8px;
+  border: 1px solid #e8e8eb;
+  border-radius: 3px;
+  font-size: 14px;
+  outline: none;
+}
+
+.icon-tool__field input[type='text']:focus {
+  border-color: #388ae5;
+}
+
+.icon-tool__checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #707684;
+}
+
+.icon-tool__checkbox-row label {
+  cursor: pointer;
+}

@@ -61,6 +61,7 @@ namespace Etch.OrchardCore.Blocks
                 o.MemberAccessStrategy.Register<DisplayBlockBodyPartViewModel>();
                 o.MemberAccessStrategy.Register<EmbedBlockViewModel>();
                 o.MemberAccessStrategy.Register<HeadingBlockViewModel>();
+                o.MemberAccessStrategy.Register<IconBlockViewModel>();
                 o.MemberAccessStrategy.Register<ImageBlockViewModel>();
                 o.MemberAccessStrategy.Register<KbButtonBlockViewModel>();
                 o.MemberAccessStrategy.Register<ListBlockViewModel>();
