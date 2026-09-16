@@ -1,4 +1,4 @@
-import names from './heroiconsNames';
+import names, { version } from './heroiconsNames';
 
 // The name list is regenerated from the heroicons package on every build (see
 // scripts/generate-heroicons.js), so it lives in its own file and this one —
@@ -23,7 +23,13 @@ const SPRITE_PATH = '/Etch.OrchardCore.Blocks/assets/heroicons.svg';
  */
 export function spriteUrl(tenantPath) {
   const base = (tenantPath || '').replace(/\/$/, '');
-  return `${base}${SPRITE_PATH}`;
+
+  // Version stamp, for the same reason the views run the sprite path through
+  // IFileVersionProvider: the file is served from the module's wwwroot under a
+  // stable name, so an icon set upgrade would otherwise keep painting from the
+  // browser's cached copy until it expired. The query sits before the symbol
+  // fragment - "…heroicons.svg?v=2.2.0#o-phone" - which is what <use> expects.
+  return `${base}${SPRITE_PATH}?v=${encodeURIComponent(version)}`;
 }
 
 /**

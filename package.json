@@ -7,7 +7,6 @@
     ],
     "scripts": {
         "generate-icons": "node scripts/generate-heroicons.js",
-        "prebuild": "node scripts/generate-heroicons.js",
         "build": "npm run generate-icons && webpack",
         "build:dev": "npm run generate-icons && webpack --mode development",
         "build:prod": "npm run generate-icons && webpack --mode production",

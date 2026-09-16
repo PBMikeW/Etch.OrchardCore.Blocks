@@ -66,8 +66,11 @@
   align-items: center;
 }
 .kb-button-tool__btn-icon svg {
-  width: 20px;
-  height: 20px;
+  /* 1em, matching Block-KbButton.cshtml: the site sizes the icon against the
+     button's own font size, and a fixed 20px preview mis-sold that at any
+     other size. */
+  width: 1em;
+  height: 1em;
 }
 
 /* ── contentEditable label ────────────────── */

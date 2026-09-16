@@ -178,6 +178,11 @@ export default class KbButton {
   // The picker keeps a document-level click listener, which has to come off
   // with the block - the old inline picker left one behind per rendered button.
   destroy() {
+    // _showPopover registers a second, capture-phase document listener, so a
+    // block deleted with its panel open leaked that one even though the
+    // picker's came off. _hidePopover is a no-op when the panel is shut.
+    this._hidePopover();
+
     if (this.iconPicker) {
       this.iconPicker.destroy();
       this.iconPicker = null;

@@ -1,3 +1,7 @@
+@* The sprite is served from the module's wwwroot under a stable name, so the
+   path gets the same version stamp asp-append-version puts on the module's
+   scripts - AddFileVersionToPath is what that tag helper calls. *@
+@inject Microsoft.AspNetCore.Mvc.ViewFeatures.IFileVersionProvider FileVersionProvider
 @{
     var style = !string.IsNullOrEmpty(Model.Style) ? Model.Style : "stdbluebutton";
     var label = !string.IsNullOrEmpty(Model.Label) ? Model.Label : "Button";
@@ -33,7 +37,16 @@
     if (padLeft != null) { wrapperStyle += $"; padding-left: {padLeft}"; }
     if (padRight != null) { wrapperStyle += $"; padding-right: {padRight}"; }
 
-    string anchor = Model.Anchor as string;
+    // null, not empty: Razor drops an attribute whose value is null, and emits
+    // the value HTML-encoded when it is not - which writing the id through
+    // Html.Raw skipped, so an anchor tune carrying a quote broke out of the
+    // attribute.
+    string anchor = string.IsNullOrEmpty(Model.Anchor as string) ? null : (string)Model.Anchor;
+
+    // Empty when the editor typed a URL that cannot go in an href (see
+    // BlockLinkUrl). The button still renders, without a destination, rather
+    // than as a javascript: link every visitor can click.
+    string href = string.IsNullOrEmpty(Model.SafeUrl) ? null : (string)Model.SafeUrl;
 
     // Icons come from the module's sprite, so the icon set is one cached request
     // instead of its markup copied into every content item that uses it. The
@@ -46,8 +59,12 @@
     if (hasIcon && useSprite)
     {
         string symbolId = Model.IconSymbolId;
+        // ?v=… before the #fragment: a <use> resolves the document first and
+        // then looks the symbol up inside it, so the query cannot go last.
         string spriteHref = System.Net.WebUtility.HtmlEncode(
-            Url.Content("~/Etch.OrchardCore.Blocks/assets/heroicons.svg") + "#" + symbolId);
+            FileVersionProvider.AddFileVersionToPath(
+                Context.Request.PathBase,
+                Url.Content("~/Etch.OrchardCore.Blocks/assets/heroicons.svg")) + "#" + symbolId);
         iconMarkup = $"<svg class=\"kb-button-icon__svg\" width=\"1em\" height=\"1em\" aria-hidden=\"true\" focusable=\"false\"><use href=\"{spriteHref}\"></use></svg>";
     }
     else if (hasIcon)
@@ -56,8 +73,8 @@
     }
 }
 
-<div style="@wrapperStyle"@(string.IsNullOrEmpty(anchor) ? null : Html.Raw($" id=\"{anchor}\""))>
-    <a href="@Model.Url" class="@style"@Html.Raw(targetAttr)@Html.Raw(linkStyle)>@if (hasIcon && Model.IsIconLeft)
+<div style="@wrapperStyle" id="@anchor">
+    <a href="@href" class="@style"@Html.Raw(targetAttr)@Html.Raw(linkStyle)>@if (hasIcon && Model.IsIconLeft)
     {<span class="kb-button-icon kb-button-icon--left">@Html.Raw(iconMarkup)</span>}@label@if (hasIcon && !Model.IsIconLeft)
     {<span class="kb-button-icon kb-button-icon--right">@Html.Raw(iconMarkup)</span>}</a>
 </div>

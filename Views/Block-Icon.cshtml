@@ -1,3 +1,7 @@
+@* The sprite is served from the module's wwwroot under a stable name, so the
+   path gets the same version stamp asp-append-version puts on the module's
+   scripts - AddFileVersionToPath is what that tag helper calls. *@
+@inject Microsoft.AspNetCore.Mvc.ViewFeatures.IFileVersionProvider FileVersionProvider
 @{
     // The module ships no front-end stylesheet, so size, colour and alignment
     // are written as inline styles the way the other block views do it. The
@@ -15,8 +19,12 @@
     if (hasIcon)
     {
         string symbolId = Model.IconSymbolId;
+        // ?v=… before the #fragment: a <use> resolves the document first and
+        // then looks the symbol up inside it, so the query cannot go last.
         string spriteHref = System.Net.WebUtility.HtmlEncode(
-            Url.Content("~/Etch.OrchardCore.Blocks/assets/heroicons.svg") + "#" + symbolId);
+            FileVersionProvider.AddFileVersionToPath(
+                Context.Request.PathBase,
+                Url.Content("~/Etch.OrchardCore.Blocks/assets/heroicons.svg")) + "#" + symbolId);
         string size = Model.SizeCss;
         string color = Model.SafeColor;
         string colorStyle = color == null ? string.Empty : $" color: {color};";
@@ -29,7 +37,7 @@
     <div class="block-icon block-icon--@sizeKey block-icon--@alignment" style="display: flex; justify-content: @justify">
         @if (Model.HasLink)
         {
-            <a href="@Model.LinkUrl" class="block-icon__link"@(Model.LinkNewTab ? Html.Raw(" target=\"_blank\" rel=\"noopener noreferrer\"") : null)>@Html.Raw(iconMarkup)</a>
+            <a href="@Model.SafeLinkUrl" class="block-icon__link"@(Model.LinkNewTab ? Html.Raw(" target=\"_blank\" rel=\"noopener noreferrer\"") : null)>@Html.Raw(iconMarkup)</a>
         }
         else
         {

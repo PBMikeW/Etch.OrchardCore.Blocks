@@ -142,6 +142,14 @@ window.initializeEditorJS = (
             config: {
                 tenantPath,
             },
+            // The icon block lays its icon out with justify-content and offers
+            // its own left/centre/right in the block settings, which is what
+            // Block-Icon.cshtml renders. The editor-wide alignment tune writes
+            // text-align instead, so its four buttons sat above the real ones
+            // doing nothing. A tool's own `tunes` list replaces the editor-wide
+            // one (Editor.js reads it as the tool's enabledBlockTunes), so this
+            // is the global list from below minus that tune.
+            tunes: ['textPreset', 'anchorTune', 'paddingTune'],
         },
         image: {
             class: MediaLibrary,
