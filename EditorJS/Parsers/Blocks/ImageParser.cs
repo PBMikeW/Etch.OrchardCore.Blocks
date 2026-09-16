@@ -74,7 +74,10 @@ namespace Etch.OrchardCore.Blocks.EditorJS.Parsers.Blocks
                 return block.Get("url");
             }
 
-            return context.MediaFileStore.MapPathToPublicUrl(mediaPath);
+            // MapPathToPublicUrl escapes every segment of the path it is handed, so a
+            // stored path that is already escaped gets escaped a second time ("%20"
+            // becomes "%2520") and the request 404s. See MediaPathNormalizer.
+            return context.MediaFileStore.MapPathToPublicUrl(MediaPathNormalizer.Normalize(mediaPath));
         }
     }
 }
