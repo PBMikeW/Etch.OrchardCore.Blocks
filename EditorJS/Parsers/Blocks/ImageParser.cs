@@ -14,6 +14,7 @@ namespace Etch.OrchardCore.Blocks.EditorJS.Parsers.Blocks
                 {
                     Alignment = block.Get("alignment", "center"),
                     Caption = block.Get("caption"),
+                    MediaPath = GetMediaPath(block),
                     Profile = GetProfile(block),
                     Stretched = block.Get("stretched", false),
                     Url = GetMediaUrl(context, block),
@@ -63,6 +64,23 @@ namespace Etch.OrchardCore.Blocks.EditorJS.Parsers.Blocks
             }
 
             return value?.ToString() ?? string.Empty;
+        }
+
+        /// <summary>
+        /// The block's raw media store path, normalized, or empty when the block has
+        /// none (a legacy block that only ever stored a pasted <c>url</c>).
+        /// </summary>
+        /// <remarks>
+        /// The view needs this alongside <c>Url</c>. Asking for a media profile URL
+        /// means handing IMediaFileStore a raw asset path, and recovering one from the
+        /// mapped public URL in <c>Url</c> is lossy: on Linux .NET reads a rooted path
+        /// as an implicit file:/// URI, so the view's Uri round-trip re-escaped the
+        /// literal '%' and every filename with a space 404'd. Handing the view the path
+        /// the block actually stored removes the round-trip.
+        /// </remarks>
+        private static string GetMediaPath(Block block)
+        {
+            return MediaPathNormalizer.Normalize(block.Get("mediaPath"));
         }
 
         private string GetMediaUrl(BlockParserContext context, Block block)
