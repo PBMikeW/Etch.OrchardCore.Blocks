@@ -68,6 +68,18 @@ export default class MediaLibraryTool {
       `${config.id}-ModalBody`
     );
 
+    // Natural size of the original asset, used by the profile picker to take
+    // no-op profiles out of play. Null means "not known yet" -- before the
+    // preview has loaded, and after a probe that failed -- and the picker reads
+    // that as: no hint line, every profile selectable.
+    this.originalSize = null;
+
+    // The asset the measurement belongs to, or is in flight for. Keyed by URL so
+    // an asset is measured at most once, and so a media swap mid-probe cannot
+    // land a stale size on the new image.
+    this.measuredUrl = '';
+    this.previewListenerAttached = false;
+
     this.ui = new Ui(this.api, () => {
       this._openMediaLibrary();
     });
@@ -101,7 +113,11 @@ export default class MediaLibraryTool {
     }
 
     render() {
-        return this.ui.render(this.data);
+        const element = this.ui.render(this.data);
+
+        this._watchPreviewSize();
+
+        return element;
     }
 
     renderSettings() {
@@ -170,13 +186,59 @@ export default class MediaLibraryTool {
             isActive: this.data.alignment === align.name,
         }));
 
-        const profileActions = this.profiles.map(profile => ({
-            icon: profile.icon,
-            label: `Profile: ${profile.name}`,
-            onActivate: () => this.setProfile(profile),
-            closeOnActivate: true,
-            isActive: this.currentProfile.name === profile.name,
-        }));
+        // -- Profile picker, capped at the original asset --
+        // The site and this preview both resize with rmode=min, and ImageSharp
+        // never upscales, so asking for a profile larger than the original's
+        // SHORT side hands back the original pixels unchanged: the profile is a
+        // no-op. Those profiles are shown but disabled, with the original's size
+        // spelled out above the list so the ceiling is not a mystery.
+        const ceiling = this.originalSize
+            ? Math.min(this.originalSize.width, this.originalSize.height)
+            : 0;
+
+        const originalSizeItems = [];
+
+        if (this.originalSize) {
+            const originalSizeHint = document.createElement('div');
+
+            originalSizeHint.className = 'media-library-original-size';
+            // An entity rather than a literal multiplication sign keeps this
+            // source ASCII; both numbers come from the image element, never from
+            // anything a user typed.
+            originalSizeHint.innerHTML = `Original: ${this.originalSize.width} &times; ${this.originalSize.height} px`;
+
+            originalSizeItems.push({
+                type: 'html',
+                element: originalSizeHint,
+            });
+        }
+
+        const profileActions = this.profiles.map(profile => {
+            const isTooLarge = ceiling > 0 && profile.previewSize > ceiling;
+
+            const action = {
+                icon: profile.icon,
+                label: `Profile: ${profile.name}`,
+                onActivate: () => this.setProfile(profile),
+                closeOnActivate: true,
+                // A block already saved above the ceiling still shows as
+                // selected: the ceiling guides the next pick, it is not a reason
+                // to rewrite what is stored.
+                isActive: this.currentProfile.name === profile.name,
+                // Editor.js greys the item and Popover.handleItemClick returns
+                // early on it, so onActivate can never fire.
+                isDisabled: isTooLarge,
+            };
+
+            if (isTooLarge) {
+                // `name` lands as data-item-name, which index.css keys off to
+                // give the item its pointer back so this hint can appear.
+                action.name = 'profile-too-large';
+                action.hint = { title: 'Larger than the original image' };
+            }
+
+            return action;
+        });
 
         const stretchedAction = {
             icon: IconStretch,
@@ -193,6 +255,7 @@ export default class MediaLibraryTool {
             },
             { type: 'separator' },
             ...alignmentActions,
+            ...originalSizeItems,
             ...profileActions,
             stretchedAction,
         ];
@@ -266,6 +329,110 @@ export default class MediaLibraryTool {
     }
 
     /**
+     * Starts measuring the original asset behind the preview.
+     *
+     * Called after every render, because the preview <img> may already be
+     * complete (cached src, or a re-render with an unchanged URL) and then no
+     * load event is coming.
+     */
+    _watchPreviewSize() {
+        const image = this.ui.nodes.image;
+
+        if (!image) {
+            return;
+        }
+
+        if (!this.previewListenerAttached) {
+            this.previewListenerAttached = true;
+
+            // The <img> element is reused for the life of the block, so one
+            // listener covers every later profile change or media swap. A load
+            // error simply never fires it, which leaves originalSize null.
+            image.addEventListener('load', () => this._measureOriginal());
+        }
+
+        if (image.complete) {
+            this._measureOriginal();
+        }
+    }
+
+    /**
+     * Works out the original asset's natural size.
+     *
+     * The preview is the cheap route: the media middleware resizes with
+     * rmode=min, which lands the short side on the size we asked for and never
+     * upscales, so a preview whose short side came back under that size cannot
+     * have been resized -- it IS the original, measured for free. Only a preview
+     * that really was downscaled costs a second request.
+     */
+    _measureOriginal() {
+        const image = this.ui.nodes.image;
+        const assetUrl = (this.data.baseUrl || this.data.url || '').split('?')[0];
+
+        if (!image || !assetUrl || this.measuredUrl === assetUrl) {
+            return;
+        }
+
+        const naturalWidth = image.naturalWidth;
+        const naturalHeight = image.naturalHeight;
+
+        // A broken preview reports 0x0; leave the size unknown and try again on
+        // the next render rather than guessing.
+        if (!naturalWidth || !naturalHeight) {
+            return;
+        }
+
+        const requestedSize = this.currentProfile ? this.currentProfile.previewSize : 0;
+
+        // The 1px allowance covers rounding in the resize: min mode aims the
+        // short side at the requested size, it does not always hit it exactly.
+        if (!requestedSize || Math.min(naturalWidth, naturalHeight) < requestedSize - 1) {
+            this.measuredUrl = assetUrl;
+            this.originalSize = { width: naturalWidth, height: naturalHeight };
+
+            return;
+        }
+
+        this._probeOriginalSize(assetUrl);
+    }
+
+    /**
+     * Loads the unresized asset off-screen purely to read its natural size.
+     *
+     * Claims measuredUrl up front so an asset is only ever probed once, and
+     * discards a result that arrives after the block moved on to other media.
+     */
+    _probeOriginalSize(assetUrl) {
+        this.measuredUrl = assetUrl;
+        this.originalSize = null;
+
+        const probe = new Image();
+
+        probe.addEventListener('load', () => {
+            if (this.measuredUrl !== assetUrl) {
+                return;
+            }
+
+            this.originalSize = {
+                width: probe.naturalWidth,
+                height: probe.naturalHeight,
+            };
+        });
+
+        // A failed probe leaves originalSize null, which the picker reads as
+        // "unknown": no hint line, every profile selectable.
+        probe.addEventListener('error', () => {
+            if (this.measuredUrl !== assetUrl) {
+                return;
+            }
+
+            this.originalSize = null;
+        });
+
+        probe.src = assetUrl;
+    }
+
+    /**
      * Updates block with selected media item.
      */
     _setMedia(media) {
@@ -283,7 +450,12 @@ export default class MediaLibraryTool {
             linkNewTab: this.data.linkNewTab || false,
         };
 
+        // Different asset, so the measured size no longer describes it.
+        this.originalSize = null;
+        this.measuredUrl = '';
+
         this.ui.render(this.data);
+        this._watchPreviewSize();
     }
 
     /**
@@ -343,6 +515,10 @@ export default class MediaLibraryTool {
         };
 
         this.ui.render(this.data);
+
+        // Same asset, so a size already measured stands; this only picks up a
+        // measurement that could not be taken from the previous preview.
+        this._watchPreviewSize();
     }
 
     get profiles() {
