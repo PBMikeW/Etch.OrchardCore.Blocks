@@ -1,4 +1,5 @@
 using System.Linq;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement.Metadata;
@@ -12,6 +13,59 @@ namespace Etch.OrchardCore.Blocks
     public class FlowPartSettings
     {
         public string[] ContainedContentTypes { get; set; } = [];
+    }
+
+    // Local settings classes matching the OrchardCore.ContentFields.Settings shapes,
+    // for the same reason FlowPartSettings above is local: this module references the
+    // OrchardCore framework libraries only, never another module's package, and
+    // WithSettings<T> writes the object under typeof(T).Name with no compile-time link
+    // to the reader. So the class names, the property names and the JSON attribute
+    // names below have to match OrchardCore.ContentFields exactly - they are the
+    // contract. Verified against OrchardCore 2.2.1
+    // (src/OrchardCore.Modules/OrchardCore.ContentFields/Settings/).
+    public class TextFieldSettings
+    {
+        public string Hint { get; set; }
+        public bool Required { get; set; }
+        public string DefaultValue { get; set; }
+    }
+
+    public class TextFieldPredefinedListEditorSettings
+    {
+        public ListValueOption[] Options { get; set; }
+        public EditorOption Editor { get; set; }
+        public string DefaultValue { get; set; }
+    }
+
+    // Serialized as a number - the content definition serializer has no string enum
+    // converter - so the order of these members is part of the contract too: Dropdown
+    // has to stay 1, which is what the site's own predefined lists already store.
+    public enum EditorOption
+    {
+        Radio,
+        Dropdown
+    }
+
+    // TextField-PredefinedList.Edit.cshtml reads these back through the real
+    // ContentFields class, whose two properties carry [JsonPropertyName] with lower
+    // case names.
+    public class ListValueOption
+    {
+        [JsonPropertyName("name")]
+        public string Name { get; set; }
+
+        [JsonPropertyName("value")]
+        public string Value { get; set; }
+
+        public ListValueOption()
+        {
+        }
+
+        public ListValueOption(string name, string value)
+        {
+            Name = name;
+            Value = value;
+        }
     }
 
     public class Migrations : DataMigration
@@ -35,8 +89,14 @@ namespace Etch.OrchardCore.Blocks
                 .WithDefaultPosition("5")
             );
 
-            // Skip to latest version on fresh installs
-            return 6;
+            // Skip to latest version on fresh installs. Note what that means for every
+            // UpdateFrom below: a fresh install runs none of them, so it gets neither the
+            // Container type nor any of the parts they attach to it. On a new tenant the
+            // Container type comes from the site's own content definition recipe instead,
+            // and anything this module attaches to it - ContentBlockStyling,
+            // BackgroundInfo, ContainerBackground - has to be in that recipe too or it will
+            // be missing there until a later UpdateFrom adds it.
+            return 7;
         }
 
         // Previously created Container content type - no longer needed but keeping
@@ -156,6 +216,105 @@ namespace Etch.OrchardCore.Blocks
             );
 
             return 6;
+        }
+
+        public async Task<int> UpdateFrom6Async()
+        {
+            // Width, corner and height options for containers, in a part this module owns.
+            // The two attaches above reuse site-defined parts; this one deliberately does
+            // not. BackgroundInfo is shared with every banner type on both sites, so putting
+            // container-only fields in it would add "Background width" and "Rounded corners"
+            // to every masthead, CTA banner and featured content banner as well. A separate,
+            // module-owned part leaves the shared one untouched, and means this migration can
+            // create it outright rather than guarding on the tenant having defined it.
+            //
+            // Not attachable: the part exists for the Container type and is attached below.
+            // Keeping it out of the admin "Add parts" list stops it being bolted onto
+            // unrelated types where no theme reads it.
+            //
+            // All three fields are TextFields with the PredefinedList editor - the same
+            // editor and the same stored shape as the site's ContentBlockStyling padding
+            // fields and the banners' LayoutOptions height field - so nothing new has to be
+            // taught to the admin UI or to a recipe author. DefaultValue only preselects the
+            // dropdown; the stored text stays empty until the item is saved, so the themes
+            // have to treat empty and the default value alike. They do, which is why a
+            // container that has never been resaved renders byte for byte as it does today.
+            //
+            // Height sits here rather than on ContentBlockStyling because it belongs with the
+            // other two in the editor, even though - unlike Width and Corners, which only mean
+            // anything once a background is set - it applies whether or not there is one.
+            await _contentDefinitionManager.AlterPartDefinitionAsync("ContainerBackground", part => part
+                .Attachable(false)
+                .WithDisplayName("Container Background")
+                .WithDescription("Width, corner and height options for a Container.")
+                .WithField("Width", field => field
+                    .OfType("TextField")
+                    .WithDisplayName("Background width")
+                    .WithEditor("PredefinedList")
+                    .WithPosition("0")
+                    .WithSettings(new TextFieldSettings
+                    {
+                        Hint = "Full width bleeds the background to the page edges; the content stays in its column."
+                    })
+                    .WithSettings(new TextFieldPredefinedListEditorSettings
+                    {
+                        Options =
+                        [
+                            new ListValueOption("Normal", "normal"),
+                            new ListValueOption("Full width", "full")
+                        ],
+                        DefaultValue = "normal",
+                        Editor = EditorOption.Dropdown
+                    })
+                )
+                .WithField("Corners", field => field
+                    .OfType("TextField")
+                    .WithDisplayName("Rounded corners")
+                    .WithEditor("PredefinedList")
+                    .WithPosition("1")
+                    .WithSettings(new TextFieldPredefinedListEditorSettings
+                    {
+                        Options =
+                        [
+                            new ListValueOption("None", "none"),
+                            new ListValueOption("Small", "sm"),
+                            new ListValueOption("Large", "lg")
+                        ],
+                        DefaultValue = "none",
+                        Editor = EditorOption.Dropdown
+                    })
+                )
+                .WithField("Height", field => field
+                    .OfType("TextField")
+                    .WithDisplayName("Minimum height")
+                    .WithEditor("PredefinedList")
+                    .WithPosition("2")
+                    .WithSettings(new TextFieldPredefinedListEditorSettings
+                    {
+                        Options =
+                        [
+                            new ListValueOption("Content", "content"),
+                            new ListValueOption("17vh", "17vh"),
+                            new ListValueOption("35vh", "35vh"),
+                            new ListValueOption("50vh", "50vh"),
+                            new ListValueOption("Full screen", "100vh")
+                        ],
+                        DefaultValue = "content",
+                        Editor = EditorOption.Dropdown
+                    })
+                )
+            );
+
+            // Position 4: after Container (0), FlowPart (1), ContentBlockStyling (2) and
+            // BackgroundInfo (3). No guard here, unlike the BackgroundInfo attach above -
+            // the part definition is created a few lines up, so it is always there.
+            await _contentDefinitionManager.AlterTypeDefinitionAsync("Container", type => type
+                .WithPart("ContainerBackground", part => part
+                    .WithPosition("4")
+                )
+            );
+
+            return 7;
         }
     }
 }
