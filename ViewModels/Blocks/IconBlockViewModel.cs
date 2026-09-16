@@ -43,7 +43,15 @@ namespace Etch.OrchardCore.Blocks.ViewModels.Blocks
         };
 
         public bool HasIcon => !string.IsNullOrEmpty(IconName);
-        public bool HasLink => !string.IsNullOrEmpty(LinkUrl);
+
+        /// <summary>
+        /// The link URL, or empty when the editor typed something that cannot
+        /// safely go in an href (see <see cref="BlockLinkUrl"/>). The view
+        /// renders the icon on its own in that case.
+        /// </summary>
+        public string SafeLinkUrl => BlockLinkUrl.SafeLinkUrl(LinkUrl);
+
+        public bool HasLink => !string.IsNullOrEmpty(SafeLinkUrl);
 
         public string SafeColor => Color != null && Palette.Contains(Color, StringComparer.OrdinalIgnoreCase) ? Color : null;
 

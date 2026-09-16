@@ -13,6 +13,14 @@ namespace Etch.OrchardCore.Blocks.ViewModels.Blocks
         public bool NewTab { get; set; }
         public bool Inline { get; set; }
 
+        /// <summary>
+        /// The button's destination, or empty when the editor typed something
+        /// that cannot safely go in an href (see <see cref="BlockLinkUrl"/>).
+        /// The view then renders the button without one, so it is inert rather
+        /// than a script waiting for a click.
+        /// </summary>
+        public string SafeUrl => BlockLinkUrl.SafeLinkUrl(Url);
+
         public bool HasIcon => (!string.IsNullOrEmpty(IconName) || !string.IsNullOrEmpty(IconSvg)) && IconPosition != "none";
         public bool IsIconLeft => IconPosition == "left" || string.IsNullOrEmpty(IconPosition);
 
