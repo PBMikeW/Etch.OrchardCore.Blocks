@@ -142,7 +142,15 @@ window.initializeEditorJS = (
                 id,
             },
         },
-        kbButton: KbButton,
+        kbButton: {
+            class: KbButton,
+            config: {
+                // The icon picker previews icons from the sprite at
+                // <tenantPath>/Etch.OrchardCore.Blocks/assets/heroicons.svg,
+                // the same way the link tool builds its search URL.
+                tenantPath,
+            },
+        },
         link: {
             class: LinkTool,
             config: {
