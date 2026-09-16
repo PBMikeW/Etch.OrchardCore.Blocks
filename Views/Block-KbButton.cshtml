@@ -34,10 +34,30 @@
     if (padRight != null) { wrapperStyle += $"; padding-right: {padRight}"; }
 
     string anchor = Model.Anchor as string;
+
+    // Icons come from the module's sprite, so the icon set is one cached request
+    // instead of its markup copied into every content item that uses it. The
+    // symbols paint with currentColor, which takes the button's own text colour,
+    // and em sizing keeps the icon in proportion to the label at any font size.
+    // Buttons saved before the sprite existed have no icon name, only the markup
+    // in their own data - those keep rendering it inline.
+    bool useSprite = Model.UseSprite;
+    string iconMarkup = null;
+    if (hasIcon && useSprite)
+    {
+        string symbolId = Model.IconSymbolId;
+        string spriteHref = System.Net.WebUtility.HtmlEncode(
+            Url.Content("~/Etch.OrchardCore.Blocks/assets/heroicons.svg") + "#" + symbolId);
+        iconMarkup = $"<svg class=\"kb-button-icon__svg\" width=\"1em\" height=\"1em\" aria-hidden=\"true\" focusable=\"false\"><use href=\"{spriteHref}\"></use></svg>";
+    }
+    else if (hasIcon)
+    {
+        iconMarkup = Model.IconSvg;
+    }
 }
 
 <div style="@wrapperStyle"@(string.IsNullOrEmpty(anchor) ? null : Html.Raw($" id=\"{anchor}\""))>
     <a href="@Model.Url" class="@style"@Html.Raw(targetAttr)@Html.Raw(linkStyle)>@if (hasIcon && Model.IsIconLeft)
-    {<span class="kb-button-icon kb-button-icon--left">@Html.Raw(Model.IconSvg)</span>}@label@if (hasIcon && !Model.IsIconLeft)
-    {<span class="kb-button-icon kb-button-icon--right">@Html.Raw(Model.IconSvg)</span>}</a>
+    {<span class="kb-button-icon kb-button-icon--left">@Html.Raw(iconMarkup)</span>}@label@if (hasIcon && !Model.IsIconLeft)
+    {<span class="kb-button-icon kb-button-icon--right">@Html.Raw(iconMarkup)</span>}</a>
 </div>

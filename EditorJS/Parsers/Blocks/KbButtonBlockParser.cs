@@ -15,6 +15,8 @@ namespace Etch.OrchardCore.Blocks.EditorJS.Parsers.Blocks
                     Label = block.Get("label"),
                     Style = block.Get("style"),
                     Alignment = block.Get("alignment"),
+                    IconName = block.Get("iconName"),
+                    IconStyle = block.Get("iconStyle"),
                     IconSvg = block.Get("iconSvg"),
                     IconPosition = block.Get("iconPosition"),
                     NewTab = block.Get<bool>("newTab", false),

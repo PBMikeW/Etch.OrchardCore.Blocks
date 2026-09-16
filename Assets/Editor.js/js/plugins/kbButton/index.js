@@ -1,5 +1,6 @@
 import { make } from '../utils/dom';
-import HEROICONS from './heroicons-data';
+import { createHeroiconPicker } from '../utils/heroiconPicker';
+import { makeIconSvg } from '../utils/heroiconsIndex';
 import './index.css';
 
 const ALIGNMENTS = [
@@ -38,6 +39,12 @@ const STYLE_ICONS = {
   stdclearbutton: '<svg width="17" height="14" viewBox="0 0 17 14"><rect x="0.5" y="0.5" width="16" height="13" rx="3" fill="none" stroke="#999"/></svg>',
 };
 
+const ICON_POSITIONS = [
+  { value: 'left', glyph: '←', title: 'Icon left' },
+  { value: 'right', glyph: '→', title: 'Icon right' },
+  { value: 'none', glyph: '✕', title: 'No icon' },
+];
+
 export default class KbButton {
   static get toolbox() {
     return {
@@ -46,8 +53,10 @@ export default class KbButton {
     };
   }
 
-  constructor({ data, api }) {
+  constructor({ data, api, config }) {
     this.api = api;
+    // Request.PathBase, so the icon sprite URL is right under a tenant prefix.
+    this.tenantPath = (config && config.tenantPath) || '';
 
     this.data = {
       url: data.url || '',
@@ -55,6 +64,10 @@ export default class KbButton {
       style: data.style || 'stdbluebutton',
       alignment: data.alignment || 'left',
       iconName: data.iconName || '',
+      iconStyle: data.iconStyle || 'outline',
+      // Content saved before the sprite existed carries the icon's markup
+      // inline. Kept so those buttons keep rendering; cleared as soon as the
+      // editor picks a new icon, which stores iconName + iconStyle instead.
       iconSvg: data.iconSvg || '',
       iconPosition: data.iconPosition || 'left',
       newTab: data.newTab === true,
@@ -67,7 +80,7 @@ export default class KbButton {
     this.iconEl = null;
     this.wysiwygArea = null;
     this.popover = null;
-    this.iconDropdown = null;
+    this.iconPicker = null;
     this._popoverOpen = false;
     this._boundOutsideClick = this._handleOutsideClick.bind(this);
   }
@@ -147,6 +160,7 @@ export default class KbButton {
       style: this.data.style,
       alignment: this.data.alignment,
       iconName: this.data.iconName,
+      iconStyle: this.data.iconStyle,
       iconSvg: this.data.iconSvg,
       iconPosition: this.data.iconPosition,
       newTab: this.data.newTab,
@@ -172,8 +186,18 @@ export default class KbButton {
     this.popover.classList.remove('kb-button-tool__popover--open');
     document.removeEventListener('click', this._boundOutsideClick, true);
     // Also hide icon dropdown
-    if (this.iconDropdown) {
-      this.iconDropdown.style.display = 'none';
+    if (this.iconPicker) {
+      this.iconPicker.close();
+    }
+  }
+
+  // Editor.js calls this when the block is removed or the editor is destroyed.
+  // The picker keeps a document-level click listener, which has to come off
+  // with the block - the old inline picker left one behind per rendered button.
+  destroy() {
+    if (this.iconPicker) {
+      this.iconPicker.destroy();
+      this.iconPicker = null;
     }
   }
 
@@ -212,7 +236,7 @@ export default class KbButton {
     // Clicks inside the popover or icon dropdown are excluded so inputs stay usable.
     this.wrapper.addEventListener('click', (e) => {
       if (e.target.closest('.kb-button-tool__popover')) return;
-      if (e.target.closest('.kb-button-tool__icon-dropdown')) return;
+      if (e.target.closest('.heroicon-picker')) return;
       if (this._popoverOpen) {
         this._hidePopover();
       } else {
@@ -227,16 +251,30 @@ export default class KbButton {
     this.wysiwygArea.appendChild(this.btnEl);
   }
 
+  _hasIcon() {
+    return (
+      Boolean(this.data.iconName || this.data.iconSvg) &&
+      this.data.iconPosition !== 'none'
+    );
+  }
+
   _updateButtonIcon() {
     if (!this.btnEl || !this.iconEl || !this.labelEl) return;
 
     this.btnEl.innerHTML = '';
     this.iconEl.innerHTML = '';
 
-    const hasIcon = this.data.iconSvg && this.data.iconPosition !== 'none';
+    const hasIcon = this._hasIcon();
 
     if (hasIcon) {
-      this.iconEl.innerHTML = this.data.iconSvg;
+      if (this.data.iconName) {
+        this.iconEl.appendChild(
+          makeIconSvg(this.tenantPath, this.data.iconStyle, this.data.iconName)
+        );
+      } else {
+        // Legacy content: the icon's markup is in the block's own data.
+        this.iconEl.innerHTML = this.data.iconSvg;
+      }
       this.iconEl.className = 'kb-button-tool__btn-icon';
 
       if (this.data.iconPosition === 'right') {
@@ -298,7 +336,7 @@ export default class KbButton {
     return row;
   }
 
-  // ── Icon picker ─────────────────────────────────
+  // ── Icon picker ─────────────────────
 
   _createIconPicker() {
     const row = make('div', 'kb-button-tool__field');
@@ -306,116 +344,57 @@ export default class KbButton {
     label.textContent = 'Icon';
     row.appendChild(label);
 
-    const pickerWrap = make('div', 'kb-button-tool__icon-picker');
-
-    const searchInput = make('input', 'kb-button-tool__icon-search', {
-      type: 'text',
-      placeholder: 'Search icons...',
-    });
-    searchInput.value = this.data.iconName || '';
-    pickerWrap.appendChild(searchInput);
-
-    // Position toggle buttons
+    // Where the icon sits relative to the label. Handed to the picker as an
+    // extra control so it shares a row with the search box and the
+    // outline/solid toggle instead of taking a second line.
     const posWrap = make('div', 'kb-button-tool__icon-pos');
 
-    const posLeft = make('button', ['kb-button-tool__icon-pos-btn'], { type: 'button', title: 'Icon left' });
-    posLeft.innerHTML = '←';
-    const posRight = make('button', ['kb-button-tool__icon-pos-btn'], { type: 'button', title: 'Icon right' });
-    posRight.innerHTML = '→';
-    const posNone = make('button', ['kb-button-tool__icon-pos-btn'], { type: 'button', title: 'No icon' });
-    posNone.innerHTML = '✕';
-
     const updatePosActive = () => {
-      posLeft.classList.toggle('active', this.data.iconPosition === 'left');
-      posRight.classList.toggle('active', this.data.iconPosition === 'right');
-      posNone.classList.toggle('active', this.data.iconPosition === 'none');
+      posButtons.forEach(({ value, button }) => {
+        button.classList.toggle('active', this.data.iconPosition === value);
+      });
     };
+
+    const posButtons = ICON_POSITIONS.map((position) => {
+      const button = make('button', 'kb-button-tool__icon-pos-btn', {
+        type: 'button',
+        title: position.title,
+      });
+      button.textContent = position.glyph;
+      button.addEventListener('click', () => {
+        this.data.iconPosition = position.value;
+        updatePosActive();
+        this._updateButtonIcon();
+      });
+      posWrap.appendChild(button);
+      return { value: position.value, button };
+    });
+
     updatePosActive();
 
-    posLeft.addEventListener('click', () => {
-      this.data.iconPosition = 'left';
-      updatePosActive();
-      this._updateButtonIcon();
-    });
-    posRight.addEventListener('click', () => {
-      this.data.iconPosition = 'right';
-      updatePosActive();
-      this._updateButtonIcon();
-    });
-    posNone.addEventListener('click', () => {
-      this.data.iconPosition = 'none';
-      updatePosActive();
-      this._updateButtonIcon();
-    });
+    this.iconPicker = createHeroiconPicker({
+      tenantPath: this.tenantPath,
+      name: this.data.iconName,
+      style: this.data.iconStyle,
+      controls: [posWrap],
+      onChange: ({ name, style }) => {
+        this.data.iconName = name;
+        this.data.iconStyle = style;
 
-    posWrap.appendChild(posLeft);
-    posWrap.appendChild(posRight);
-    posWrap.appendChild(posNone);
-    pickerWrap.appendChild(posWrap);
+        // The sprite supplies the markup now, so inline SVG carried over from
+        // older content is stale - drop it rather than render the old icon.
+        this.data.iconSvg = '';
 
-    // Dropdown grid
-    this.iconDropdown = make('div', 'kb-button-tool__icon-dropdown');
-    this.iconDropdown.style.display = 'none';
-    pickerWrap.appendChild(this.iconDropdown);
+        if (this.data.iconPosition === 'none') {
+          this.data.iconPosition = 'left';
+          updatePosActive();
+        }
 
-    searchInput.addEventListener('focus', () => {
-      this._populateIconDropdown(searchInput.value);
-      this.iconDropdown.style.display = '';
+        this._updateButtonIcon();
+      },
     });
 
-    searchInput.addEventListener('input', () => {
-      this._populateIconDropdown(searchInput.value);
-      this.iconDropdown.style.display = '';
-    });
-
-    // Hide icon dropdown when clicking outside the picker (but stay in popover)
-    document.addEventListener('click', (e) => {
-      if (!pickerWrap.contains(e.target)) {
-        this.iconDropdown.style.display = 'none';
-      }
-    });
-
-    this._onIconSelect = (icon) => {
-      this.data.iconName = icon.name;
-      this.data.iconSvg = icon.svg;
-      searchInput.value = icon.name;
-      this.iconDropdown.style.display = 'none';
-
-      if (this.data.iconPosition === 'none') {
-        this.data.iconPosition = 'left';
-        updatePosActive();
-      }
-      this._updateButtonIcon();
-    };
-
-    row.appendChild(pickerWrap);
+    row.appendChild(this.iconPicker.element);
     return row;
-  }
-
-  _populateIconDropdown(query) {
-    if (!this.iconDropdown) return;
-    this.iconDropdown.innerHTML = '';
-
-    const q = (query || '').toLowerCase().trim();
-    const filtered = q
-      ? HEROICONS.filter(ic => ic.name.includes(q))
-      : HEROICONS;
-
-    if (filtered.length === 0) {
-      const empty = make('div', 'kb-button-tool__icon-empty');
-      empty.textContent = 'No icons found';
-      this.iconDropdown.appendChild(empty);
-      return;
-    }
-
-    filtered.forEach(icon => {
-      const cell = make('button', 'kb-button-tool__icon-cell', { type: 'button', title: icon.name });
-      cell.innerHTML = icon.svg;
-      cell.addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        this._onIconSelect(icon);
-      });
-      this.iconDropdown.appendChild(cell);
-    });
   }
 }

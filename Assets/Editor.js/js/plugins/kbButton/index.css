@@ -129,29 +129,9 @@
   border-color: #388ae5;
 }
 
-/* ── Icon picker ──────────────────────────── */
-.kb-button-tool__icon-picker {
-  flex: 1;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  position: relative;
-}
-
-.kb-button-tool__icon-search {
-  flex: 1;
-  min-width: 0;
-  padding: 6px 8px;
-  border: 1px solid #e8e8eb;
-  border-radius: 3px;
-  font-size: 14px;
-  outline: none;
-}
-.kb-button-tool__icon-search:focus {
-  border-color: #388ae5;
-}
-
-/* Position toggle buttons */
+/* ── Icon position toggle ──────────────────
+   The searchable picker itself lives in utils/heroiconPicker.css, shared
+   with the icon block. */
 .kb-button-tool__icon-pos {
   display: flex;
   gap: 2px;
@@ -179,55 +159,6 @@
   background: #388ae5;
   border-color: #388ae5;
   color: #fff;
-}
-
-/* Dropdown grid */
-.kb-button-tool__icon-dropdown {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  z-index: 9999;
-  max-height: 320px;
-  overflow-y: auto;
-  background: #fff;
-  border: 1px solid #e8e8eb;
-  border-radius: 4px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-  margin-top: 4px;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(36px, 1fr));
-  gap: 2px;
-  padding: 6px;
-}
-
-.kb-button-tool__icon-cell {
-  width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  border-radius: 4px;
-  background: none;
-  cursor: pointer;
-  padding: 4px;
-  color: #333;
-}
-.kb-button-tool__icon-cell:hover {
-  background: #e8f0fe;
-}
-.kb-button-tool__icon-cell svg {
-  width: 22px;
-  height: 22px;
-}
-
-.kb-button-tool__icon-empty {
-  grid-column: 1 / -1;
-  padding: 12px;
-  text-align: center;
-  color: #999;
-  font-size: 13px;
 }
 
 /* ── Checkbox row ─────────────────────────── */
