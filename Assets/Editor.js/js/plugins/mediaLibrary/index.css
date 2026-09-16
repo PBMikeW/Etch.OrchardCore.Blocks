@@ -59,10 +59,12 @@
     text-align: right;
 }
 
-.media-library-tool.align--left .media-library-item__image img,
-.media-library-tool.align--right .media-library-item__image img {
-    max-width: 60%;
-}
+/* Left/right aligned previews used to be capped here at max-width: 60%. The
+   published page has no counterpart -- PropertyBrokersWeb.Theme/Views/Block-Image.cshtml
+   renders the block as a plain <figure> with an img-fluid image and the theme
+   sets no width cap on it -- so the cap only ever made the editor preview
+   smaller than the page it was previewing. Alignment stays; the max-width: 100%
+   on .media-library-item__image img still keeps the preview inside its column. */
 
 .media-library-tool.align--left .media-library-item__caption {
     text-align: left;
@@ -74,6 +76,23 @@
 
 .media-library-tool.align--right .media-library-item__caption {
     text-align: right;
+}
+
+/* "Original: W x H px" line above the profile list in the block settings
+   popover, so the greyed-out profiles have a stated reason. */
+.media-library-original-size {
+    padding: 4px 10px 6px;
+    font-size: 12px;
+    color: #707684;
+}
+
+/* Editor.js greys a disabled popover item but also gives it pointer-events: none,
+   which stops its own hover hint from ever firing. The item stays inert either
+   way -- Popover.handleItemClick returns before onActivate on isDisabled -- so
+   taking the pointer back only buys back the tooltip that explains the greying. */
+.ce-popover-item--disabled[data-item-name='profile-too-large'] {
+    pointer-events: auto;
+    cursor: default;
 }
 
 /* Link settings in block settings popover */
