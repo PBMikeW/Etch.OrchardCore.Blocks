@@ -29,6 +29,7 @@ namespace Etch.OrchardCore.Blocks.EditorJS.Parsers
             { "delimiter", new DelimiterBlockParser() },
             { "embed", new EmbedBlockParser() },
             { "header", new HeadingBlockParser() },
+            { "icon", new IconBlockParser() },
             { "image", new ImageParser() },
             { "kbButton", new KbButtonBlockParser() },
             { "list", new ListBlockParser() },

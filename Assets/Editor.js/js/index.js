@@ -17,6 +17,7 @@ import LinkTool from './plugins/link';
 import FontSizeTool from './plugins/fontSize';
 import RemoveFormat from './plugins/removeFormat';
 import MediaLibrary from './plugins/mediaLibrary';
+import IconBlock from './plugins/iconBlock';
 import KbButton from './plugins/kbButton';
 import Breadcrumb from './plugins/breadcrumb';
 import { attachFormatPainter } from './plugins/formatPainter';
@@ -135,6 +136,12 @@ window.initializeEditorJS = (
         header: {
             class: Header,
             inlineToolbar: true,
+        },
+        icon: {
+            class: IconBlock,
+            config: {
+                tenantPath,
+            },
         },
         image: {
             class: MediaLibrary,
