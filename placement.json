@@ -1,0 +1,14 @@
+{
+  "TextField": [
+    { "place": "-", "displayType": "Detail", "differentiator": "ContainerBackground-Width" },
+    { "place": "-", "displayType": "Detail", "differentiator": "ContainerBackground-Corners" },
+    { "place": "-", "displayType": "Detail", "differentiator": "ContainerBackground-Height" },
+    { "place": "-", "displayType": "Summary", "differentiator": "ContainerBackground-Width" },
+    { "place": "-", "displayType": "Summary", "differentiator": "ContainerBackground-Corners" },
+    { "place": "-", "displayType": "Summary", "differentiator": "ContainerBackground-Height" }
+  ],
+  "BooleanField": [
+    { "place": "-", "displayType": "Detail", "differentiator": "Container-Nopadding" },
+    { "place": "-", "displayType": "Summary", "differentiator": "Container-Nopadding" }
+  ]
+}
