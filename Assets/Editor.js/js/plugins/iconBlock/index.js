@@ -264,29 +264,14 @@ export default class IconBlock {
     label.textContent = 'Icon';
     row.appendChild(label);
 
-    // Picking is one-way without this: every icon in the grid swaps one icon
-    // for another, so an editor who added the block by mistake, or wants the
-    // link without the glyph, had no way back to "no icon" short of deleting
-    // the block. Handed to the picker as a control so it shares the row with
-    // the search box, the way the button tool's position buttons do.
-    const clearButton = make('button', 'heroicon-picker__control-btn', {
-      type: 'button',
-      title: 'No icon',
-    });
-    clearButton.textContent = '✕';
-    clearButton.addEventListener('click', () => {
-      if (this.iconPicker) {
-        // clear() emits onChange with an empty name, so the preview and the
-        // saved data follow the same path as a pick.
-        this.iconPicker.clear();
-      }
-    });
-
+    // The "back to no icon" button this block used to hand in as a control now
+    // lives in the picker itself, on the chip naming the current icon - two
+    // crosses in one row, doing the same thing, was one too many. The picker's
+    // clear() is the same call this one made.
     this.iconPicker = createHeroiconPicker({
       tenantPath: this.tenantPath,
       name: this.data.iconName,
       style: this.data.iconStyle,
-      controls: [clearButton],
       onChange: ({ name, style }) => {
         this.data.iconName = name;
         this.data.iconStyle = style;

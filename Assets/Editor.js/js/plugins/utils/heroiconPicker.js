@@ -22,6 +22,10 @@ const STYLE_LABELS = { outline: 'Outline', solid: 'Solid' };
  * @param {string} options.style       'outline' | 'solid'.
  * @param {Function} options.onChange  Called with ({ name, style }) on any pick.
  * @param {HTMLElement[]} [options.controls]  Extra buttons for the control row.
+ * @param {string|Function} [options.emptyLabel]  What the selected-icon chip
+ *        reads when nothing is picked. A function is re-read on every sync, so
+ *        a tool whose block can hold an icon the picker knows nothing about
+ *        (kbButton's legacy inline markup) can say so.
  * @returns {{ element: HTMLElement, close: Function, clear: Function, destroy: Function }}
  */
 export function createHeroiconPicker({
@@ -30,11 +34,61 @@ export function createHeroiconPicker({
   style = 'outline',
   onChange,
   controls = [],
+  emptyLabel = 'No icon',
 }) {
   const state = { name, style: styles.includes(style) ? style : 'outline' };
 
   const wrapper = make('div', 'heroicon-picker');
   const row = make('div', 'heroicon-picker__row');
+
+  // ── Selected icon ───────────────────────────────
+  // The row used to say nothing at all about what was picked: the search box is
+  // emptied on every pick (see close) and seeding it with the icon's name
+  // filtered the grid down to that one icon, so an editor chose an icon and the
+  // field they had just typed into went blank again - only the button preview
+  // moved. This chip is the field's value: swatch, name, and a way back to no
+  // icon, leaving the search box free to search.
+  const selected = make('div', 'heroicon-picker__selected');
+  const selectedIcon = make('span', 'heroicon-picker__selected-icon');
+  const selectedName = make('span', 'heroicon-picker__selected-name');
+
+  const selectedClear = make('button', 'heroicon-picker__selected-clear', {
+    type: 'button',
+    title: 'Remove icon',
+  });
+  selectedClear.textContent = '×';
+  selectedClear.addEventListener('click', e => {
+    // Stopped here so the click neither reopens the grid nor reaches the
+    // block's own "click anywhere to toggle the settings panel" handler.
+    e.preventDefault();
+    e.stopPropagation();
+    clearSelection();
+  });
+
+  selected.appendChild(selectedIcon);
+  selected.appendChild(selectedName);
+  selected.appendChild(selectedClear);
+  row.appendChild(selected);
+
+  const syncSelected = () => {
+    selectedIcon.innerHTML = '';
+    selected.classList.toggle('heroicon-picker__selected--empty', !state.name);
+    selectedClear.hidden = !state.name;
+
+    if (state.name) {
+      selectedIcon.appendChild(makeIconSvg(tenantPath, state.style, state.name));
+      selectedName.textContent = state.name;
+      selected.title = `${state.name} (${STYLE_LABELS[state.style]})`;
+    } else {
+      selectedName.textContent =
+        typeof emptyLabel === 'function' ? emptyLabel() : emptyLabel;
+      selected.title = selectedName.textContent;
+    }
+  };
+
+  // The block may already carry an icon: the chip is how reopening the panel
+  // shows which one, which the row never did before.
+  syncSelected();
 
   const search = make('input', 'heroicon-picker__search', {
     type: 'text',
@@ -44,7 +98,8 @@ export function createHeroiconPicker({
   // Deliberately left empty. Seeding it with the current icon's name filtered
   // the grid down to that one icon every time the panel opened, so an editor
   // wanting a different icon had to clear the box first. The current icon is
-  // marked in the full grid instead (see populate).
+  // marked in the full grid instead (see populate) and named in the chip beside
+  // this box.
   row.appendChild(search);
 
   // ── Outline / solid toggle ──────────────────────
@@ -58,6 +113,8 @@ export function createHeroiconPicker({
     button.addEventListener('click', () => {
       state.style = value;
       syncStyleButtons();
+      // The chip's swatch is drawn in the picked weight, so it follows.
+      syncSelected();
       populate(search.value);
       // Switching style re-picks the same icon in the other weight, so the
       // preview updates without making the editor search for it again.
@@ -120,7 +177,21 @@ export function createHeroiconPicker({
   const pick = iconName => {
     if (!iconName) return;
     state.name = iconName;
+    syncSelected();
     close();
+    emit();
+  };
+
+  /**
+   * Back to "no icon". Reached from the chip's clear button and from the
+   * returned clear(), so both land on the same state, highlight and onChange.
+   */
+  const clearSelection = () => {
+    state.name = '';
+    syncSelected();
+    if (isOpen()) {
+      populate(search.value);
+    }
     emit();
   };
 
@@ -329,17 +400,11 @@ export function createHeroiconPicker({
     close,
 
     /**
-     * Back to "no icon". Tools that offer this put a control in the picker's
-     * own row (see iconBlock), so the reset belongs here: the picker owns the
-     * selected name, the highlight and the onChange contract.
+     * Back to "no icon". The picker owns the selected name, the chip, the grid
+     * highlight and the onChange contract, so the reset belongs here; its own
+     * chip offers the editor the same thing.
      */
-    clear() {
-      state.name = '';
-      if (isOpen()) {
-        populate(search.value);
-      }
-      emit();
-    },
+    clear: clearSelection,
 
     destroy() {
       document.removeEventListener('click', onDocumentClick);

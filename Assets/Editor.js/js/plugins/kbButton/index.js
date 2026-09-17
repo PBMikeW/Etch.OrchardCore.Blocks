@@ -365,6 +365,9 @@ export default class KbButton {
       name: this.data.iconName,
       style: this.data.iconStyle,
       controls: [posWrap],
+      // A button saved before the sprite existed has markup but no name, so
+      // "No icon" would contradict the preview beside it.
+      emptyLabel: () => (this.data.iconSvg ? 'Custom icon' : 'No icon'),
       onChange: ({ name, style }) => {
         this.data.iconName = name;
         this.data.iconStyle = style;
@@ -373,7 +376,9 @@ export default class KbButton {
         // older content is stale - drop it rather than render the old icon.
         this.data.iconSvg = '';
 
-        if (this.data.iconPosition === 'none') {
+        // Picking an icon while the position is "none" means the editor wants
+        // to see it; clearing the icon is not a reason to move it.
+        if (name && this.data.iconPosition === 'none') {
           this.data.iconPosition = 'left';
           updatePosActive();
         }
