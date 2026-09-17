@@ -68,6 +68,32 @@ namespace Etch.OrchardCore.Blocks
         }
     }
 
+    // Local mirror of OrchardCore.Title.Models.TitlePartSettings, for the same reason
+    // the classes above are local: TitlePart ships in the OrchardCore.Title *module*,
+    // not in a framework library, and this csproj references the OrchardCore framework
+    // libraries only. WithSettings<T> writes the object under typeof(T).Name with no
+    // compile-time link to the reader, so the class name and the property names below
+    // are the contract. Verified against OrchardCore 2.2.1
+    // (src/OrchardCore.Modules/OrchardCore.Title/Models/TitlePartSettings.cs). Pattern
+    // is deliberately not mirrored: it would be null and the content definition
+    // serializer drops nulls, so mirroring it would change nothing.
+    public class TitlePartSettings
+    {
+        public TitlePartOptions Options { get; set; } = TitlePartOptions.Editable;
+
+        public bool RenderTitle { get; set; } = true;
+    }
+
+    // Serialized as a number, like EditorOption above, so the order of these members is
+    // part of the contract too: Editable has to stay 0.
+    public enum TitlePartOptions
+    {
+        Editable,
+        GeneratedDisabled,
+        GeneratedHidden,
+        EditableRequired
+    }
+
     public class Migrations : DataMigration
     {
         private readonly IContentDefinitionManager _contentDefinitionManager;
@@ -96,7 +122,7 @@ namespace Etch.OrchardCore.Blocks
             // and anything this module attaches to it - ContentBlockStyling,
             // BackgroundInfo, ContainerBackground - has to be in that recipe too or it will
             // be missing there until a later UpdateFrom adds it.
-            return 7;
+            return 8;
         }
 
         // Previously created Container content type - no longer needed but keeping
@@ -315,6 +341,46 @@ namespace Etch.OrchardCore.Blocks
             );
 
             return 7;
+        }
+
+        public async Task<int> UpdateFrom7Async()
+        {
+            // Give containers a name, the way the bag part sections (FlowBanner and the
+            // rest) already have one. TitlePart puts an optional text box on the widget
+            // editor which the AdminTheme lifts into the widget toolbar, so a page full
+            // of containers reads "Hero row", "Stats strip" rather than five identical
+            // cards saying "Container".
+            //
+            // Editable, not EditableRequired: the name is a convenience for whoever is
+            // editing the page, and every Container already saved has no title.
+            // Requiring one would fail validation on every existing page the next time
+            // it is opened and saved.
+            //
+            // RenderTitle = false makes it an editor-only label - the same thing
+            // OrchardCore.Forms does for its own TitlePart attaches. The public
+            // Widget-Container views render only Model.Content.FlowPart, so nothing
+            // prints the title today in any case, but a theme that rendered the whole
+            // Content zone would; placement.json in this module hides the Detail and
+            // Summary shapes as well.
+            //
+            // Position "0" ties with the Container part, which is also at "0". Harmless:
+            // the AdminTheme moves the title input out of the form and into the widget
+            // toolbar, and renumbering the other four parts would churn every existing
+            // Container definition for nothing. Nothing else about the type is touched -
+            // AlterTypeDefinitionAsync merges into the stored definition, so the
+            // stereotype, display name and the Creatable/Listable flags stay as they are.
+            await _contentDefinitionManager.AlterTypeDefinitionAsync("Container", type => type
+                .WithPart("TitlePart", part => part
+                    .WithPosition("0")
+                    .WithSettings(new TitlePartSettings
+                    {
+                        Options = TitlePartOptions.Editable,
+                        RenderTitle = false
+                    })
+                )
+            );
+
+            return 8;
         }
     }
 }
