@@ -115,14 +115,39 @@ namespace Etch.OrchardCore.Blocks
                 .WithDefaultPosition("5")
             );
 
+            // ContentBlock's editor-only name, the same attach UpdateFrom8Async makes for
+            // existing databases. This one step is repeated here rather than left to the
+            // UpdateFrom chain because a fresh install runs none of those (see below) and
+            // the site's content definition recipe does not carry TitlePart on ContentBlock.
+            //
+            // Unguarded, like the UpdateFrom8Async attach: on a tenant where the recipe has
+            // not defined ContentBlock yet this creates the type carrying only TitlePart.
+            // That is safe because AlterTypeDefinitionAsync merges into the stored
+            // definition rather than replacing it, so whichever of the two runs second - the
+            // recipe or this - ends with the full type. A guard would be the worse trade: it
+            // would skip permanently on exactly the tenants that define ContentBlock later,
+            // and a fresh install is already at the latest version so no UpdateFrom would
+            // ever repair it.
+            await _contentDefinitionManager.AlterTypeDefinitionAsync("ContentBlock", type => type
+                .WithPart("TitlePart", part => part
+                    .WithPosition("1")
+                    .WithSettings(new TitlePartSettings
+                    {
+                        Options = TitlePartOptions.Editable,
+                        RenderTitle = false
+                    })
+                )
+            );
+
             // Skip to latest version on fresh installs. Note what that means for every
             // UpdateFrom below: a fresh install runs none of them, so it gets neither the
             // Container type nor any of the parts they attach to it. On a new tenant the
             // Container type comes from the site's own content definition recipe instead,
             // and anything this module attaches to it - ContentBlockStyling,
             // BackgroundInfo, ContainerBackground - has to be in that recipe too or it will
-            // be missing there until a later UpdateFrom adds it.
-            return 8;
+            // be missing there until a later UpdateFrom adds it. The ContentBlock TitlePart
+            // above is the one exception, applied here as well as in UpdateFrom8Async.
+            return 9;
         }
 
         // Previously created Container content type - no longer needed but keeping
@@ -381,6 +406,46 @@ namespace Etch.OrchardCore.Blocks
             );
 
             return 8;
+        }
+
+        public async Task<int> UpdateFrom8Async()
+        {
+            // The same editor-only name for ContentBlock that UpdateFrom7Async gave
+            // Container. ContentBlock is the other type a page is mostly made of, and a
+            // column of them in the flow editor is just as anonymous: every card reads
+            // "Content Block". TitlePart gives each one an optional label, which the
+            // AdminTheme lifts out of the form and into the widget toolbar.
+            //
+            // Editable, not EditableRequired, for the reason UpdateFrom7Async gives and
+            // one more besides: every ContentBlock on both sites is already saved without
+            // a title, and there are far more of them than there are Containers.
+            // Requiring a value would fail validation the next time any of those pages is
+            // opened and saved.
+            //
+            // RenderTitle = false keeps it out of the front end. The Widget-ContentBlock
+            // views render the block body, not the whole Content zone, so nothing prints
+            // the title today in any case; placement.json in this module hides the Detail
+            // and Summary shapes as well, the same rule it already carries for Container.
+            //
+            // Position "1" puts it after the ContentBlock part at "0". It ties with
+            // ContentBlockStyling, which is also at "1" - harmless for the same reason the
+            // tie in UpdateFrom7Async is: the AdminTheme hides this part's wrapper and
+            // moves the input into the widget toolbar, so the two never compete for a spot
+            // in the form. Renumbering ContentBlockStyling would churn a site-defined part
+            // this module does not own. Nothing else about the type is touched -
+            // AlterTypeDefinitionAsync merges into the stored definition.
+            await _contentDefinitionManager.AlterTypeDefinitionAsync("ContentBlock", type => type
+                .WithPart("TitlePart", part => part
+                    .WithPosition("1")
+                    .WithSettings(new TitlePartSettings
+                    {
+                        Options = TitlePartOptions.Editable,
+                        RenderTitle = false
+                    })
+                )
+            );
+
+            return 9;
         }
     }
 }
