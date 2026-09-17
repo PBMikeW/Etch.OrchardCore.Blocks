@@ -822,23 +822,61 @@ export function attachTextPresets(editor, holderEl) {
   // Whether a preset has anything to say about this block's tool.
   const isStyleable = (block) => !!block && MENU_TOOLS.indexOf(block.name) !== -1;
 
+  // The block the toolbar is currently pointing at. EditorJS moves the toolbar
+  // to whichever block the pointer is over but exposes no API for "the block
+  // the toolbar is on", so it is remembered from the same mouseover that syncs
+  // the button — and it is the only thing that still knows which block the user
+  // means once the pointer has left that block to reach the button.
+  let toolbarBlockEl = null;
+  // The block the button was last synced for; see the mouseover listener below.
+  let lastBlockEl = null;
+
+  const blockOfEl = (el) => {
+    const blockEl = el && el.closest ? el.closest('.ce-block') : null;
+    // A remembered element can outlive its block (deleted, or the tool
+    // re-rendered): getBlockByElement then gives nothing and the next candidate
+    // is used.
+    return (blockEl && editor.blocks.getBlockByElement(blockEl)) || null;
+  };
+
+  const firstBlockOf = (api) => {
+    try {
+      return api.blocks.getBlocksCount() > 0 ? api.blocks.getBlockByIndex(0) || null : null;
+    } catch (e) {
+      return null;
+    }
+  };
+
+  // The block a hover or a click on the button is about, in the order the
+  // editor reads as "the block I am looking at":
+  //
+  //   1. the block under the pointer, when the event came from inside one;
+  //   2. the block the toolbar is on — the one the pointer opened it over and
+  //      has just left in order to reach the button;
+  //   3. the caret's block, for a caret moved by keyboard with no hover;
+  //   4. the first block, so a freshly loaded editor nobody has clicked into
+  //      still has a target.
+  //
+  // (3) alone used to decide the click, and that was the disappearing-button
+  // bug: EditorJS has no current block until the user has placed a caret, so on
+  // an editor that has only ever been hovered getCurrentBlockIndex() is -1, the
+  // click read that as "unstyleable block" and hid the button the editor had
+  // just pressed. Hover and click now resolve the block the same way, so the
+  // two can no longer disagree about whether there is anything to style.
+  const targetBlock = (fromEl) => blockOfEl(fromEl)
+    || blockOfEl(toolbarBlockEl)
+    || currentBlockOf(editor)
+    || firstBlockOf(editor);
+
   // The toolbar actions row is ONE row reused for every block, so the button's
   // state has to follow the block the toolbar is pointing at — see MENU_TOOLS
   // for why a table must not get a live-looking button. Hidden with an inline
   // style rather than a class: it beats the display rule in ./index.css with no
   // second rule to keep in step.
   //
-  // The block under the pointer wins, because that is the one EditorJS moves
-  // the toolbar to; getCurrentBlockIndex() is the fallback for a caret moved by
-  // keyboard, where there is no hovered element to read.
-  const blockUnderPointer = (fromEl) => {
-    const blockEl = fromEl && fromEl.closest ? fromEl.closest('.ce-block') : null;
-    const hovered = blockEl ? editor.blocks.getBlockByElement(blockEl) : null;
-    return hovered || currentBlockOf(editor);
-  };
-
+  // This is the ONLY place the button is hidden.
   const syncButton = (button, fromEl) => {
-    const styleable = isStyleable(blockUnderPointer(fromEl));
+    const styleable = isStyleable(targetBlock(fromEl));
     button.style.display = styleable ? '' : 'none';
     return styleable;
   };
@@ -882,10 +920,16 @@ export function attachTextPresets(editor, holderEl) {
     const wasOpen = !!openMenu;
     closeDropdown();
     // Re-checked here as well as on hover: a keyboard caret move can put the
-    // toolbar on an unstyleable block without a mouseover ever firing.
-    const block = currentBlockOf(editor);
+    // toolbar on an unstyleable block without a mouseover ever firing. Resolved
+    // exactly as the hover does — see targetBlock.
+    const block = targetBlock(null);
     if (!isStyleable(block)) {
-      e.currentTarget.style.display = 'none';
+      // Hand the decision back to the one place that owns it and let the next
+      // hover re-decide from scratch. Hiding the button here is what made it
+      // vanish under the pointer, and the stale lastBlockEl then kept it hidden
+      // until the pointer had visited some other block.
+      lastBlockEl = null;
+      syncButton(e.currentTarget, null);
       return;
     }
     if (!wasOpen) {
@@ -913,14 +957,19 @@ export function attachTextPresets(editor, holderEl) {
 
   // One listener per editor, and only recomputed when the pointer crosses into
   // a different block: mouseover fires for every element inside one.
-  let lastBlockEl = null;
   holderEl.addEventListener('mouseover', (e) => {
     const blockEl = e.target && e.target.closest ? e.target.closest('.ce-block') : null;
     // Nothing outside a block re-decides this. The toolbar is a sibling of the
     // blocks, so the pointer leaves the block on its way to the button — and
-    // falling back to the caret's block there would show the button again over
-    // the very table it was just hidden for.
-    if (!blockEl || blockEl === lastBlockEl) {
+    // re-deciding there would show the button again over the very table it was
+    // just hidden for.
+    if (!blockEl) {
+      return;
+    }
+    // Remembered on every crossing, not only when the block changes: this is
+    // what the button click reads once the pointer has left the block.
+    toolbarBlockEl = blockEl;
+    if (blockEl === lastBlockEl) {
       return;
     }
     lastBlockEl = blockEl;
