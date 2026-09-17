@@ -13,9 +13,101 @@
   gap: 4px;
 }
 
+/* The picked icon, shown as the field's value. The search box next to it is
+   cleared on every pick, so without this the row gave the editor no sign that
+   anything had been selected. */
+.heroicon-picker__selected {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  /* Shrinks before the search box does, and never grows past the panel. */
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  height: 30px;
+  padding: 0 3px 0 6px;
+  border: 1px solid #e8e8eb;
+  border-radius: 3px;
+  /* Pinned for the same reason as the search box: the admin's dark theme
+     paints bare controls dark inside this otherwise light panel. */
+  background: #fff;
+  color: #333;
+  font-size: 12px;
+  line-height: 1;
+}
+
+.heroicon-picker__selected--empty {
+  color: #999;
+}
+
+.heroicon-picker__selected-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  flex: none;
+  color: #333;
+}
+
+/* The sprite symbols carry no intrinsic size, so the swatch has to give the
+   <svg> one - the same job .heroicon-picker__cell svg does in the grid. */
+.heroicon-picker__selected-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Nothing picked: a dashed box where the swatch will go, so the chip reads as
+   an empty field rather than a stray label. */
+.heroicon-picker__selected--empty .heroicon-picker__selected-icon {
+  border: 1px dashed #d0d0d5;
+  border-radius: 3px;
+}
+
+/* The longest heroicon name is 29 characters, so the chip is capped and the
+   full name lives in the title attribute rather than pushing the search box
+   onto its own line. */
+.heroicon-picker__selected-name {
+  min-width: 0;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.heroicon-picker__selected-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex: none;
+  padding: 0;
+  border: none;
+  border-radius: 3px;
+  background: none;
+  color: #707684;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+/* The element's own display would otherwise beat the UA's [hidden] rule, so
+   the clear button has to opt out explicitly when there is nothing to clear. */
+.heroicon-picker__selected-clear[hidden] {
+  display: none;
+}
+
+.heroicon-picker__selected-clear:hover {
+  background: #f4f5f7;
+  color: #333;
+}
+
 .heroicon-picker__search {
   flex: 1;
-  min-width: 0;
+  /* Enough that the chip and the style toggle wrap onto their own line rather
+     than squeezing the search box down to a few characters. */
+  min-width: 110px;
   padding: 6px 8px;
   border: 1px solid #e8e8eb;
   border-radius: 3px;
