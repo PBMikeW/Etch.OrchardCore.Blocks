@@ -8,8 +8,8 @@
     { "place": "-", "displayType": "Summary", "differentiator": "ContainerBackground-Height" }
   ],
   "TitlePart": [
-    { "place": "-", "displayType": "Detail", "contentType": [ "Container" ] },
-    { "place": "-", "displayType": "Summary", "contentType": [ "Container" ] }
+    { "place": "-", "displayType": "Detail", "contentType": [ "Container", "ContentBlock" ] },
+    { "place": "-", "displayType": "Summary", "contentType": [ "Container", "ContentBlock" ] }
   ],
   "BooleanField": [
     { "place": "-", "displayType": "Detail", "differentiator": "Container-Nopadding" },
