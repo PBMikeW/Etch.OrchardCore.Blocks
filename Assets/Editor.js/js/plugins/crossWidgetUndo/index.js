@@ -255,7 +255,13 @@ function restoreCaret(instance, caret, fallbackIndex) {
   const editor = instance.editor;
   let index = caret ? caret.blockIndex : fallbackIndex;
   if (typeof index !== 'number' || index < 0) {
-    return;
+    // Neither the snapshot nor the change knows a block — a change made
+    // entirely with the mouse (a preset from the toolbar, a tune, a drag)
+    // records no caret, and an undo of one used to leave the focus wherever
+    // the click had put it, outside the editor. Land on the first block
+    // instead: the point is that the editor has the caret again, so the next
+    // Ctrl+Z is unambiguous and the user can carry on typing.
+    index = 0;
   }
   let count = 0;
   try {
@@ -688,10 +694,23 @@ function onGlobalKeyDown(e) {
   if (isChromeField(e.target) || isChromeField(document.activeElement)) {
     return;
   }
-  // Only claim the shortcut inside an editor we manage. Elsewhere on the admin
-  // page — a title input, a taxonomy field — the browser's own undo has to
-  // keep working.
-  if (!inManagedEditor(e.target) && !inManagedEditor(document.activeElement)) {
+  // Claim the shortcut inside an editor we manage — and also when the focus is
+  // nowhere in particular on a page that has one.
+  //
+  // Requiring focus to be inside an editor is what made Ctrl+Z look broken:
+  // every mouse-only edit (a preset from the toolbar, a tune, a drag) leaves
+  // document.activeElement on <body>, so the key the user pressed to take that
+  // edit back was handed to a browser that had nothing to undo. There is one
+  // page-wide timeline, so there is no ambiguity to resolve by focus: whichever
+  // widget the last change happened in is the one that steps back.
+  //
+  // The real fields keep their native undo either way — isChromeField above
+  // has already returned for an input, a textarea, a select or any
+  // contenteditable outside a block, which covers the title, the taxonomy
+  // fields and the editor's own chrome. What is left is body, a button, a
+  // link: places where the browser has no undo of its own to lose.
+  const inEditor = inManagedEditor(e.target) || inManagedEditor(document.activeElement);
+  if (!inEditor && !instances.length) {
     return;
   }
   // Inside our editors we swallow the key even when there is nothing to undo:
