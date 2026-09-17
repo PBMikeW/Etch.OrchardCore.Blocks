@@ -7,6 +7,10 @@
     { "place": "-", "displayType": "Summary", "differentiator": "ContainerBackground-Corners" },
     { "place": "-", "displayType": "Summary", "differentiator": "ContainerBackground-Height" }
   ],
+  "TitlePart": [
+    { "place": "-", "displayType": "Detail", "contentType": [ "Container" ] },
+    { "place": "-", "displayType": "Summary", "contentType": [ "Container" ] }
+  ],
   "BooleanField": [
     { "place": "-", "displayType": "Detail", "differentiator": "Container-Nopadding" },
     { "place": "-", "displayType": "Summary", "differentiator": "Container-Nopadding" }
