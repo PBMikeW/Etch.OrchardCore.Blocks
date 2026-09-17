@@ -251,18 +251,28 @@ function placeOffset(editable, offset) {
   }
 }
 
+/**
+ * The block an undo should leave the user at: the snapshot's own caret, else
+ * the block the undone change touched, else the first block.
+ *
+ * The last step matters. A change made entirely with the mouse — a preset from
+ * the toolbar, a tune, a drag — records no caret, and an undo of one used to
+ * leave the focus wherever the click had put it, outside the editor. Landing on
+ * the first block is not a guess about intent, it is what puts the caret back
+ * in the editor so the next Ctrl+Z is unambiguous and the user can carry on
+ * typing.
+ *
+ * One function, so the scroll and the caret always name the same block and the
+ * page is never moved twice to two different places.
+ */
+function resolveFocusIndex(caret, fallbackIndex) {
+  const index = caret ? caret.blockIndex : fallbackIndex;
+  return typeof index === 'number' && index >= 0 ? index : 0;
+}
+
 function restoreCaret(instance, caret, fallbackIndex) {
   const editor = instance.editor;
-  let index = caret ? caret.blockIndex : fallbackIndex;
-  if (typeof index !== 'number' || index < 0) {
-    // Neither the snapshot nor the change knows a block — a change made
-    // entirely with the mouse (a preset from the toolbar, a tune, a drag)
-    // records no caret, and an undo of one used to leave the focus wherever
-    // the click had put it, outside the editor. Land on the first block
-    // instead: the point is that the editor has the caret again, so the next
-    // Ctrl+Z is unambiguous and the user can carry on typing.
-    index = 0;
-  }
+  let index = resolveFocusIndex(caret, fallbackIndex);
   let count = 0;
   try {
     count = editor.blocks.getBlocksCount();
@@ -569,11 +579,12 @@ async function applyTo(instance, snapshotIndex, fallbackFocusIndex) {
       }
     }
 
-    // A snapshot recorded without a caret (the baseline) falls back to the
-    // block the undone change touched.
-    const focusIndex = snapshot.caret ? snapshot.caret.blockIndex : fallbackFocusIndex;
+    // One index for both, so the scroll and the caret agree: a snapshot
+    // recorded without a caret (the baseline, or any mouse-only change) falls
+    // back to the block the undone change touched, then to the first block.
+    const focusIndex = resolveFocusIndex(snapshot.caret, fallbackFocusIndex);
     revealWidget(instance, focusIndex);
-    restoreCaret(instance, snapshot.caret, fallbackFocusIndex);
+    restoreCaret(instance, snapshot.caret, focusIndex);
     return true;
   } catch (e) {
     console.warn('Cross-widget undo: could not restore a snapshot', e);
@@ -710,14 +721,23 @@ function onGlobalKeyDown(e) {
   // fields and the editor's own chrome. What is left is body, a button, a
   // link: places where the browser has no undo of its own to lose.
   const inEditor = inManagedEditor(e.target) || inManagedEditor(document.activeElement);
-  if (!inEditor && !instances.length) {
+  // Registered-but-detached instances do not count: a page whose Blocks widgets
+  // have all been deleted must hand the key back rather than go on swallowing
+  // it for a timeline nobody can see. dropInstance only runs when an undo walks
+  // past a dead entry, so the list can outlive the DOM.
+  if (!inEditor && !instances.some((instance) => document.contains(instance.holderEl))) {
     return;
   }
   // Inside our editors we swallow the key even when there is nothing to undo:
   // the browser's contenteditable undo edits the DOM behind EditorJS's back
   // and desyncs its block model, which is worse than doing nothing.
   e.preventDefault();
-  e.stopPropagation();
+  // Only inside an editor, where the point is to beat a block tool's own
+  // handler to the key. Out on the page the key is ours to act on but not to
+  // hide: another admin script listening for Ctrl+Z still gets to see it.
+  if (inEditor) {
+    e.stopPropagation();
+  }
 
   if (action === 'redo') {
     redo();

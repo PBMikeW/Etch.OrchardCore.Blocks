@@ -833,10 +833,17 @@ export function attachTextPresets(editor, holderEl) {
 
   const blockOfEl = (el) => {
     const blockEl = el && el.closest ? el.closest('.ce-block') : null;
-    // A remembered element can outlive its block (deleted, or the tool
-    // re-rendered): getBlockByElement then gives nothing and the next candidate
-    // is used.
-    return (blockEl && editor.blocks.getBlockByElement(blockEl)) || null;
+    if (!blockEl) {
+      return null;
+    }
+    try {
+      // A remembered element can outlive its block (deleted, or the tool
+      // re-rendered): getBlockByElement then gives nothing — or throws, on a
+      // node it no longer recognises — and the next candidate is used.
+      return editor.blocks.getBlockByElement(blockEl) || null;
+    } catch (e) {
+      return null;
+    }
   };
 
   const firstBlockOf = (api) => {
@@ -854,8 +861,7 @@ export function attachTextPresets(editor, holderEl) {
   //   2. the block the toolbar is on — the one the pointer opened it over and
   //      has just left in order to reach the button;
   //   3. the caret's block, for a caret moved by keyboard with no hover;
-  //   4. the first block, so a freshly loaded editor nobody has clicked into
-  //      still has a target.
+  //   4. with `allowFirst`, the first block.
   //
   // (3) alone used to decide the click, and that was the disappearing-button
   // bug: EditorJS has no current block until the user has placed a caret, so on
@@ -863,10 +869,17 @@ export function attachTextPresets(editor, holderEl) {
   // click read that as "unstyleable block" and hid the button the editor had
   // just pressed. Hover and click now resolve the block the same way, so the
   // two can no longer disagree about whether there is anything to style.
-  const targetBlock = (fromEl) => blockOfEl(fromEl)
+  //
+  // (4) is for deciding whether to SHOW the button on an editor nobody has
+  // touched yet, and for nothing else. Only the caller that paints the button
+  // asks for it: guessing a block to show chrome for is harmless, guessing one
+  // to rewrite is not, so the click never takes it — a click that resolves to
+  // nothing re-syncs the button and opens no menu, rather than restyling
+  // whatever happens to be at the top of the widget.
+  const targetBlock = (fromEl, allowFirst) => blockOfEl(fromEl)
     || blockOfEl(toolbarBlockEl)
     || currentBlockOf(editor)
-    || firstBlockOf(editor);
+    || (allowFirst ? firstBlockOf(editor) : null);
 
   // The toolbar actions row is ONE row reused for every block, so the button's
   // state has to follow the block the toolbar is pointing at — see MENU_TOOLS
@@ -876,7 +889,7 @@ export function attachTextPresets(editor, holderEl) {
   //
   // This is the ONLY place the button is hidden.
   const syncButton = (button, fromEl) => {
-    const styleable = isStyleable(targetBlock(fromEl));
+    const styleable = isStyleable(targetBlock(fromEl, true));
     button.style.display = styleable ? '' : 'none';
     return styleable;
   };
@@ -921,8 +934,8 @@ export function attachTextPresets(editor, holderEl) {
     closeDropdown();
     // Re-checked here as well as on hover: a keyboard caret move can put the
     // toolbar on an unstyleable block without a mouseover ever firing. Resolved
-    // exactly as the hover does — see targetBlock.
-    const block = targetBlock(null);
+    // as the hover does, minus the first-block guess — see targetBlock.
+    const block = targetBlock(null, false);
     if (!isStyleable(block)) {
       // Hand the decision back to the one place that owns it and let the next
       // hover re-decide from scratch. Hiding the button here is what made it
@@ -963,13 +976,7 @@ export function attachTextPresets(editor, holderEl) {
     // blocks, so the pointer leaves the block on its way to the button — and
     // re-deciding there would show the button again over the very table it was
     // just hidden for.
-    if (!blockEl) {
-      return;
-    }
-    // Remembered on every crossing, not only when the block changes: this is
-    // what the button click reads once the pointer has left the block.
-    toolbarBlockEl = blockEl;
-    if (blockEl === lastBlockEl) {
+    if (!blockEl || blockEl === lastBlockEl) {
       return;
     }
     lastBlockEl = blockEl;
@@ -978,6 +985,32 @@ export function attachTextPresets(editor, holderEl) {
       syncButton(button, e.target);
     }
   });
+
+  // The block the toolbar is on is remembered from pointer MOTION, not from
+  // mouseover. Chrome re-fires mouseover under a stationary pointer whenever
+  // the DOM beneath it changes, and EditorJS changes it on every keypress (it
+  // closes the toolbar), so a mouseover-fed memory was restored a millisecond
+  // after the keydown below cleared it — measured: one mouseover on the old
+  // block after each keydown, and no mousemove at all. mousemove only fires
+  // when the user really moves the mouse, which is the signal meant here.
+  holderEl.addEventListener('mousemove', (e) => {
+    const blockEl = e.target && e.target.closest ? e.target.closest('.ce-block') : null;
+    if (blockEl) {
+      toolbarBlockEl = blockEl;
+    }
+  });
+
+  // A key pressed inside the editor moves the caret, and from then on the caret
+  // is what the user means — not the block the pointer happened to rest on
+  // earlier. Arrow down out of a hovered paragraph and the remembered element
+  // would otherwise still outrank the caret in targetBlock and style the block
+  // the user has just left. Forgetting it lets the caret win; the next real
+  // pointer movement re-establishes the hover, and clearing lastBlockEl makes
+  // the mouseover re-sync the button even if the pointer never left the block.
+  holderEl.addEventListener('keydown', () => {
+    toolbarBlockEl = null;
+    lastBlockEl = null;
+  }, true);
 
   // The toolbar actions row may not exist at init; retry via observer, exactly
   // as the format painter injects its brush.
