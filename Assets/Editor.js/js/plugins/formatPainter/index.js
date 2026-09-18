@@ -188,14 +188,22 @@ export function attachFormatPainter(editor, holderEl) {
     }
     if (Object.keys(copied.styles).length && STYLABLE_TOOLS.includes(saved.tool)) {
       const tag = blockTagOf({ type: saved.tool, data });
+      // includeLinks, for the same reason ../textPreset passes it: the theme's
+      // own `a { color: ... }` beats a colour the link merely inherits from the
+      // wrapper around the block, so without it a target full of links comes
+      // out looking unpainted. It matters twice over here, because the strip
+      // pass inside applyWholeBlockStyles clears the wrappers INSIDE anchors as
+      // well — so a painter that did not rewrite them would take a preset's
+      // link colour off the block it was painting.
+      const options = { includeLinks: true };
       if (saved.tool === 'list') {
         const items = data.items || [];
-        const painted = items.map((item) => applyWholeBlockStyles(item, copied.styles, document, tag));
+        const painted = items.map((item) => applyWholeBlockStyles(item, copied.styles, document, tag, options));
         if (painted.some((item, i) => item !== items[i])) {
           update.items = painted;
         }
       } else {
-        const text = applyWholeBlockStyles(data.text || '', copied.styles, document, tag);
+        const text = applyWholeBlockStyles(data.text || '', copied.styles, document, tag, options);
         if (text !== data.text) {
           update.text = text;
         }
