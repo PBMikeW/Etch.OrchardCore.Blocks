@@ -119,8 +119,10 @@ function isBareWrapper(el) {
 }
 
 // Remove `prop` from every element that sets it, dropping wrappers left empty.
-// Links are left alone: an inline colour on <a> is a separate editorial choice,
-// and the theme's link colour beats the painted wrapper anyway.
+// The <a> elements themselves are left alone: an inline colour on an anchor is a
+// separate editorial choice, and nothing here writes one — a style meant to
+// cover link text goes in a wrapper INSIDE the anchor (see the `includeLinks`
+// option below), which this does clear.
 // Exported for ../textPreset, whose "None" strips the properties a preset owns
 // without re-wrapping anything afterwards.
 export function stripProperty(root, prop) {
@@ -153,31 +155,10 @@ export function stripProperty(root, prop) {
   });
 }
 
-/**
- * Re-wrap a block's text so every character carries the given styles, exactly
- * as the inline tools would have written them. Properties absent from `styles`
- * are left untouched; blank content is returned as-is (no empty wrappers).
- * Legacy markup in the target is upgraded on the way, whatever is painted.
- *
- * @param {string} html
- * @param {{ color?: string, backgroundColor?: string, fontSize?: string }} styles
- * @param {Document} doc
- * @param {string} blockTag  see extractWholeBlockStyles
- * @returns {string}
- */
-export function applyWholeBlockStyles(html, styles, doc = document, blockTag = 'p') {
-  const upgraded = upgradeLegacyMarkup(html, blockTag, doc) || '';
-  const wrappers = WRAPPERS.filter(({ prop }) => styles[prop]);
-  if (!wrappers.length) {
-    return upgraded;
-  }
-  const root = parse(upgraded, doc);
-  if (!collectTextNodes(root, []).length) {
-    return upgraded;
-  }
-
-  wrappers.forEach(({ prop }) => stripProperty(root, prop));
-
+// Move everything inside `host` into a fresh nested chain of the tools' own
+// wrappers — <mark> outside <font> outside <span class="fontsize-tool"> — and
+// put the chain back where the content was.
+function wrapContents(host, wrappers, styles, doc) {
   let outer = null;
   let inner = null;
   wrappers.forEach(({ prop, tag, className }) => {
@@ -193,9 +174,65 @@ export function applyWholeBlockStyles(html, styles, doc = document, blockTag = '
     }
     inner = el;
   });
-  while (root.firstChild) {
-    inner.appendChild(root.firstChild);
+  while (host.firstChild) {
+    inner.appendChild(host.firstChild);
   }
-  root.appendChild(outer);
+  host.appendChild(outer);
+}
+
+/**
+ * Re-wrap a block's text so every character carries the given styles, exactly
+ * as the inline tools would have written them. Properties absent from `styles`
+ * are left untouched; blank content is returned as-is (no empty wrappers).
+ * Legacy markup in the target is upgraded on the way, whatever is painted.
+ *
+ * @param {string} html
+ * @param {{ color?: string, backgroundColor?: string, fontSize?: string }} styles
+ * @param {Document} doc
+ * @param {string} blockTag  see extractWholeBlockStyles
+ * @param {{ includeLinks?: boolean }} [options]
+ *   `includeLinks` repeats the wrappers INSIDE every <a> as well, so link text
+ *   takes the style too. The block-level wrapper alone never reaches a link:
+ *   `a { color: ... }` in the theme (and in the admin's own CSS) sets the
+ *   colour on the <a> itself, which beats a colour merely inherited from an
+ *   ancestor, so a paragraph or a bullet built around links looked untouched —
+ *   the reported "the styles do not apply ... because of links". A wrapper
+ *   inside the anchor is an inline style on the element the text really sits
+ *   in, so it wins, and the href, the anchor's own attributes and its position
+ *   in the text are untouched.
+ *
+ *   Off by default: the format painter copies whatever format a block already
+ *   has and has never claimed a link's colour. ../textPreset opts in, because a
+ *   named style is a statement about the whole block.
+ * @returns {string}
+ */
+export function applyWholeBlockStyles(html, styles, doc = document, blockTag = 'p', options = {}) {
+  const upgraded = upgradeLegacyMarkup(html, blockTag, doc) || '';
+  const wrappers = WRAPPERS.filter(({ prop }) => styles[prop]);
+  if (!wrappers.length) {
+    return upgraded;
+  }
+  const root = parse(upgraded, doc);
+  if (!collectTextNodes(root, []).length) {
+    return upgraded;
+  }
+
+  // Every property about to be written is stripped first, inside links as much
+  // as outside them — stripProperty leaves the <a> itself alone but clears the
+  // wrappers within it — so applying the same preset twice replaces the markup
+  // instead of nesting a second copy of it.
+  wrappers.forEach(({ prop }) => stripProperty(root, prop));
+
+  wrapContents(root, wrappers, styles, doc);
+
+  if (options.includeLinks) {
+    // After the block-level wrap, so every anchor is already inside the outer
+    // chain and these are the innermost wrappers, which is what makes them win.
+    Array.from(root.querySelectorAll('a')).forEach((anchor) => {
+      if (collectTextNodes(anchor, []).length) {
+        wrapContents(anchor, wrappers, styles, doc);
+      }
+    });
+  }
   return root.innerHTML;
 }
