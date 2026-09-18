@@ -77,15 +77,14 @@ const STYLABLE_TOOLS = ['paragraph', 'header', 'list', 'quote'];
 // Tools a preset styles in place rather than converting; see the header note.
 // A quote is styled on its `text` alone, so its caption is never touched.
 //
-// One caveat on quotes, recorded here because it is invisible from this file:
-// @editorjs/quote's sanitiser allows only <br> in `text`, and the fork
-// registers the tool without `inlineToolbar` (Assets/Editor.js/js/index.js), so
-// it inherits no inline-tool rules either. A quote therefore drops ALL inline
-// markup on editor.save() — its own <b> as much as a preset's <font> — and a
-// preset on a quote is a no-op once saved. Styling it in place is still the
-// right behaviour here: it leaves the block intact instead of destroying it,
-// and the day the quote tool is registered with the inline toolbar the colour
-// starts sticking with no change to this file.
+// One note on quotes, recorded here because it is invisible from this file:
+// @editorjs/quote's own sanitiser allows nothing but <br> in `text`, so a
+// preset's <font> would be stripped on editor.save() if that were the whole
+// rule. The fork registers the tool with `inlineToolbar: true`
+// (Assets/Editor.js/js/index.js), which merges every inline tool's sanitiser
+// config into the field — so colour, size and bold all survive a save inside
+// a quote, and a preset on a quote sticks. Take the inline toolbar off that
+// registration again and every one of them goes back to being stripped.
 const KEEPS_TYPE = ['list', 'quote'];
 
 // Properties a preset owns, in the ../formatPainter/inlineStyles vocabulary.
@@ -583,8 +582,10 @@ async function applyPresetToBlock(api, block, plan) {
     // tune. Writing only the tune centred the quote in the editor while its own
     // setting — and the published page — still said left, which is exactly the
     // "in settings it was still left aligned" that was reported. Written only
-    // for the values the tool has a setting for; the tune still carries the
-    // rest.
+    // for the values the tool has a setting for; the tune still records the
+    // rest, though on a quote they change nothing on the published page —
+    // Block-Quote.cshtml looks for "center" and nothing else, so right and
+    // justify are front-end no-ops there whichever key carries them.
     const own = OWN_ALIGNMENT_TOOLS[saved.tool];
     if (own && own.indexOf(plan.alignment) !== -1 && data.alignment !== plan.alignment) {
       update.alignment = plan.alignment;
