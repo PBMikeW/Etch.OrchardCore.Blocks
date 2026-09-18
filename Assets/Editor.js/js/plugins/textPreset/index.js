@@ -28,10 +28,12 @@ import {
  * mistake can be undone with the ordinary tools.
  *
  * What a preset owns: block type, heading level, whole-block colour, font size,
- * and alignment when the preset names one. What it never touches: bold, italic
- * and links (real inline emphasis — see the census note in ./presets.js), the
- * anchor and padding tunes, and the block's own alignment when the preset has
- * none.
+ * and alignment when the preset names one — including the colour and size of
+ * text inside links, which the theme's own `a { color }` would otherwise
+ * override (the anchors themselves, and every href, are left exactly as they
+ * were). What it never touches: bold and italic (real inline emphasis — see the
+ * census note in ./presets.js), the anchor and padding tunes, and the block's
+ * own alignment when the preset has none.
  *
  * Two ways in, because a cross-block selection and the block settings popover
  * are not always available at the same moment:
@@ -89,6 +91,11 @@ const KEEPS_TYPE = ['list', 'quote'];
 // Properties a preset owns, in the ../formatPainter/inlineStyles vocabulary.
 // "None" clears exactly these and nothing else.
 const PRESET_PROPS = ['color', 'backgroundColor', 'fontSize'];
+
+// Tools with an alignment field of their own in `data`, and the values each one
+// understands. The editor-wide alignment tune is not the whole story for these:
+// see the note where this is used.
+const OWN_ALIGNMENT_TOOLS = { quote: ['left', 'center'] };
 
 // Classes that exist only to carry a font size: the current tool's, and the
 // legacy ones from ../utils/legacyMarkup.
@@ -423,7 +430,56 @@ function restyle(html, plan, tag) {
   // A highlight is left alone — presets do not own it, and only "None" clears
   // it — so the strip list here is the size and nothing else.
   const base = stripStyles(html, ['fontSize'], tag);
-  return applyWholeBlockStyles(base, plan.styles, document, tag);
+  // includeLinks: a preset is a statement about the whole block, and the theme's
+  // own `a { color }` beats a colour the link merely inherits — so without this
+  // every link in the block kept the site's link colour and the preset looked
+  // like it had not applied. See applyWholeBlockStyles.
+  return applyWholeBlockStyles(base, plan.styles, document, tag, { includeLinks: true });
+}
+
+/**
+ * One list block's items, restyled.
+ *
+ * Items come in either shape the list tools have used: a plain HTML string
+ * (@editorjs/list v1, which is what this fork bundles and what
+ * ListBlockParser.cs reads), or v2's { content, items } node with its own
+ * nested children. Nested bullets are styled too — they are part of the block
+ * the preset was applied to — and anything unrecognised is passed through
+ * untouched rather than flattened to a string.
+ *
+ * @returns {{ items: Array, changed: boolean }} `changed` decides whether the
+ *   block is updated at all, so an unchanged list is not rewritten.
+ */
+function restyleItems(items, plan, tag) {
+  let changed = false;
+  const styled = items.map((item) => {
+    if (typeof item === 'string') {
+      const text = restyle(item, plan, tag);
+      if (text !== item) {
+        changed = true;
+      }
+      return text;
+    }
+    if (!item || typeof item !== 'object') {
+      return item;
+    }
+    const next = { ...item };
+    if (typeof item.content === 'string') {
+      next.content = restyle(item.content, plan, tag);
+      if (next.content !== item.content) {
+        changed = true;
+      }
+    }
+    if (Array.isArray(item.items)) {
+      const nested = restyleItems(item.items, plan, tag);
+      if (nested.changed) {
+        next.items = nested.items;
+        changed = true;
+      }
+    }
+    return next;
+  });
+  return { items: styled, changed };
 }
 
 // Data overrides for blocks.convert(), the same trick the format painter uses:
@@ -481,10 +537,9 @@ async function applyPresetToBlock(api, block, plan) {
   const tag = blockTagOf({ type: saved.tool, data: { ...data, level: update.level || data.level } });
 
   if (saved.tool === 'list') {
-    const items = data.items || [];
-    const styled = items.map((item) => (typeof item === 'string' ? restyle(item, plan, tag) : item));
-    if (styled.some((item, i) => item !== items[i])) {
-      update.items = styled;
+    const restyled = restyleItems(data.items || [], plan, tag);
+    if (restyled.changed) {
+      update.items = restyled.items;
     }
   } else {
     // `text` only, for a quote as much as for a paragraph or a heading: the
@@ -520,6 +575,19 @@ async function applyPresetToBlock(api, block, plan) {
         delete tunes.anyTune;
       }
       alignmentChanged = true;
+    }
+    // Some tools keep their own alignment as well as taking the tune, and the
+    // tune is not what they render from: @editorjs/quote shows "Align Left" /
+    // "Align Center" rows of its own in the same settings popover, renders from
+    // data.alignment, and QuoteBlockParser.cs reads that field and not the
+    // tune. Writing only the tune centred the quote in the editor while its own
+    // setting — and the published page — still said left, which is exactly the
+    // "in settings it was still left aligned" that was reported. Written only
+    // for the values the tool has a setting for; the tune still carries the
+    // rest.
+    const own = OWN_ALIGNMENT_TOOLS[saved.tool];
+    if (own && own.indexOf(plan.alignment) !== -1 && data.alignment !== plan.alignment) {
+      update.alignment = plan.alignment;
     }
   }
 
