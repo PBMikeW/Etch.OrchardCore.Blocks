@@ -357,6 +357,19 @@ export default class MediaLibraryTool {
     }
 
     /**
+     * Is the chosen asset a vector?
+     *
+     * Reads the media path the site renders from and falls back to the asset
+     * URL the same way _measureOriginal does, then looks at the extension with
+     * any query string dropped.
+     */
+    _isSvgAsset() {
+        const source = this.data.mediaPath || this.data.baseUrl || this.data.url || '';
+
+        return source.split('?')[0].toLowerCase().endsWith('.svg');
+    }
+
+    /**
      * Works out the original asset's natural size.
      *
      * The preview is the cheap route: the media middleware resizes with
@@ -370,6 +383,21 @@ export default class MediaLibraryTool {
         const assetUrl = (this.data.baseUrl || this.data.url || '').split('?')[0];
 
         if (!image || !assetUrl || this.measuredUrl === assetUrl) {
+            return;
+        }
+
+        // An SVG has no pixel ceiling to find. The theme never puts one through
+        // ImageSharp: it serves the file as it is and caps it in CSS at the
+        // chosen profile's width, so every profile is meaningful and lossless.
+        // The natural size a browser reports for a vector comes from its
+        // width/height attributes or its viewBox -- a drawing coordinate space,
+        // not a pixel limit -- so measuring it would only disable profiles that
+        // work. Claim the URL so the probe never runs and leave the size
+        // unknown, which the picker reads as: no hint line, nothing disabled.
+        if (this._isSvgAsset()) {
+            this.measuredUrl = assetUrl;
+            this.originalSize = null;
+
             return;
         }
 
