@@ -2,6 +2,7 @@
 using Etch.OrchardCore.Blocks.ViewModels;
 using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.ContentTypes.Editors;
+using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using System;
 using System.Threading.Tasks;
@@ -10,8 +11,13 @@ namespace Etch.OrchardCore.Blocks.Settings
 {
     public class BlockBodyPartSettingsDriver : ContentTypePartDefinitionDisplayDriver
     {
+#if NET10_0_OR_GREATER
+        public override IDisplayResult Edit(ContentTypePartDefinition model, BuildEditorContext context)
+        {
+#else
         public override IDisplayResult Edit(ContentTypePartDefinition model)
         {
+#endif
             if (!string.Equals(nameof(BlockBodyPart), model.PartDefinition.Name, StringComparison.Ordinal))
             {
                 return null;
@@ -40,7 +46,11 @@ namespace Etch.OrchardCore.Blocks.Settings
 
             context.Builder.WithSettings(settings);
 
+#if NET10_0_OR_GREATER
+            return Edit(model, context);
+#else
             return Edit(model);
+#endif
         }
     }
 }
