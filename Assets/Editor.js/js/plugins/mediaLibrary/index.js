@@ -2,6 +2,7 @@ import bootstrap from 'bootstrap';
 import $ from 'jquery';
 
 import Ui from './ui';
+import { isSvgAsset } from './asset';
 import './index.css';
 import { IconStretch, IconPicture } from '@codexteam/icons';
 
@@ -359,14 +360,13 @@ export default class MediaLibraryTool {
     /**
      * Is the chosen asset a vector?
      *
-     * Reads the media path the site renders from and falls back to the asset
-     * URL the same way _measureOriginal does, then looks at the extension with
-     * any query string dropped.
+     * Prefers the media path the site renders from, then falls back to the asset
+     * URL the way _measureOriginal does, and looks at the extension with any
+     * query string dropped. The test itself lives in ./asset so the preview
+     * (ui.js), which caps an SVG at the profile width, decides it the same way.
      */
     _isSvgAsset() {
-        const source = this.data.mediaPath || this.data.baseUrl || this.data.url || '';
-
-        return source.split('?')[0].toLowerCase().endsWith('.svg');
+        return isSvgAsset(this.data);
     }
 
     /**
@@ -508,6 +508,12 @@ export default class MediaLibraryTool {
 
         if (tune === 'stretched') {
             const blockId = this.api.blocks.getCurrentBlockIndex();
+
+            // The only change to the SVG width cap's inputs that does not go
+            // through Ui.render, and the cap hangs off exactly this flag: the
+            // site drops the cap for a stretched SVG and puts it back when the
+            // stretch comes off.
+            this.ui.applySizeCap(this.data);
 
             setTimeout(() => {
                 this.api.blocks.stretchBlock(blockId, this.data[tune]);
