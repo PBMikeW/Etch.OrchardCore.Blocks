@@ -3,9 +3,13 @@
     { "place": "-", "displayType": "Detail", "differentiator": "ContainerBackground-Width" },
     { "place": "-", "displayType": "Detail", "differentiator": "ContainerBackground-Corners" },
     { "place": "-", "displayType": "Detail", "differentiator": "ContainerBackground-Height" },
+    { "place": "-", "displayType": "Detail", "differentiator": "ContainerBackground-Overlay" },
+    { "place": "-", "displayType": "Detail", "differentiator": "ContainerTabs-Display" },
     { "place": "-", "displayType": "Summary", "differentiator": "ContainerBackground-Width" },
     { "place": "-", "displayType": "Summary", "differentiator": "ContainerBackground-Corners" },
-    { "place": "-", "displayType": "Summary", "differentiator": "ContainerBackground-Height" }
+    { "place": "-", "displayType": "Summary", "differentiator": "ContainerBackground-Height" },
+    { "place": "-", "displayType": "Summary", "differentiator": "ContainerBackground-Overlay" },
+    { "place": "-", "displayType": "Summary", "differentiator": "ContainerTabs-Display" }
   ],
   "TitlePart": [
     { "place": "-", "displayType": "Detail", "contentType": [ "Container", "ContentBlock" ] },
