@@ -5,11 +5,21 @@
     { "place": "-", "displayType": "Detail", "differentiator": "ContainerBackground-Height" },
     { "place": "-", "displayType": "Detail", "differentiator": "ContainerBackground-Overlay" },
     { "place": "-", "displayType": "Detail", "differentiator": "ContainerTabs-Display" },
+    { "place": "-", "displayType": "Detail", "differentiator": "ContainerLink-Url" },
+    { "place": "-", "displayType": "Detail", "differentiator": "ContainerLink-Target" },
+    { "place": "-", "displayType": "Detail", "differentiator": "ContainerLink-Area" },
+    { "place": "-", "displayType": "Detail", "differentiator": "ContainerLink-Overlay" },
+    { "place": "-", "displayType": "Detail", "differentiator": "ContainerLink-Animation" },
     { "place": "-", "displayType": "Summary", "differentiator": "ContainerBackground-Width" },
     { "place": "-", "displayType": "Summary", "differentiator": "ContainerBackground-Corners" },
     { "place": "-", "displayType": "Summary", "differentiator": "ContainerBackground-Height" },
     { "place": "-", "displayType": "Summary", "differentiator": "ContainerBackground-Overlay" },
-    { "place": "-", "displayType": "Summary", "differentiator": "ContainerTabs-Display" }
+    { "place": "-", "displayType": "Summary", "differentiator": "ContainerTabs-Display" },
+    { "place": "-", "displayType": "Summary", "differentiator": "ContainerLink-Url" },
+    { "place": "-", "displayType": "Summary", "differentiator": "ContainerLink-Target" },
+    { "place": "-", "displayType": "Summary", "differentiator": "ContainerLink-Area" },
+    { "place": "-", "displayType": "Summary", "differentiator": "ContainerLink-Overlay" },
+    { "place": "-", "displayType": "Summary", "differentiator": "ContainerLink-Animation" }
   ],
   "TitlePart": [
     { "place": "-", "displayType": "Detail", "contentType": [ "Container", "ContentBlock" ] },
