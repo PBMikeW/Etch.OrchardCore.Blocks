@@ -144,10 +144,13 @@ namespace Etch.OrchardCore.Blocks
             // Container type nor any of the parts they attach to it. On a new tenant the
             // Container type comes from the site's own content definition recipe instead,
             // and anything this module attaches to it - ContentBlockStyling,
-            // BackgroundInfo, ContainerBackground - has to be in that recipe too or it will
-            // be missing there until a later UpdateFrom adds it. The ContentBlock TitlePart
-            // above is the one exception, applied here as well as in UpdateFrom8Async.
-            return 9;
+            // BackgroundInfo, ContainerBackground, ContainerTabs - has to be in that recipe
+            // too or it will be missing there until a later UpdateFrom adds it. That includes
+            // every field on ContainerBackground: Width, Corners, Height and the Overlay field
+            // UpdateFrom9Async adds - and ContainerTabs' Display field, part and attach both,
+            // from UpdateFrom10Async. The ContentBlock TitlePart above is the one exception,
+            // applied here as well as in UpdateFrom8Async.
+            return 11;
         }
 
         // Previously created Container content type - no longer needed but keeping
@@ -446,6 +449,104 @@ namespace Etch.OrchardCore.Blocks
             );
 
             return 9;
+        }
+
+        public async Task<int> UpdateFrom9Async()
+        {
+            // An opt-in scrim over a container's background image, so light text can sit on
+            // a busy photo. It is a new field on the module-owned ContainerBackground part
+            // rather than BackgroundInfo.UseOverlay, and that is deliberate. UseOverlay is
+            // shared with the banners, and on a Container its value cannot be trusted: the
+            // AdminTheme hides that checkbox for containers, but the hidden checkbox still
+            // posts its default of true, so nearly every container saved so far stores
+            // UseOverlay = true without anyone having chosen it. Honouring the legacy flag
+            // would put the masthead gradient on all of them at once. A separate field whose
+            // default is "none" means no existing container changes until someone picks it.
+            //
+            // Same editor and stored shape as the three fields UpdateFrom6Async created, and
+            // the same rule applies: the stored text is empty until the item is resaved, so
+            // the themes treat empty and "none" alike. Position "3" puts it after Height.
+            //
+            // AlterPartDefinitionAsync merges into the stored part, so Width, Corners and
+            // Height - and the part's own settings - are left as they are.
+            await _contentDefinitionManager.AlterPartDefinitionAsync("ContainerBackground", part => part
+                .WithField("Overlay", field => field
+                    .OfType("TextField")
+                    .WithDisplayName("Image overlay")
+                    .WithEditor("PredefinedList")
+                    .WithPosition("3")
+                    .WithSettings(new TextFieldSettings
+                    {
+                        Hint = "Darkens the lower part of the background image so light text stays readable."
+                    })
+                    .WithSettings(new TextFieldPredefinedListEditorSettings
+                    {
+                        Options =
+                        [
+                            new ListValueOption("None", "none"),
+                            new ListValueOption("Navy scrim", "navy")
+                        ],
+                        DefaultValue = "none",
+                        Editor = EditorOption.Dropdown
+                    })
+                )
+            );
+
+            return 10;
+        }
+
+        public async Task<int> UpdateFrom10Async()
+        {
+            // A display option for containers: show the child widgets stacked, as today, or
+            // as tabs - one child at a time, each labelled by its own name (the TitlePart
+            // UpdateFrom7Async gave every widget). A Projects page with "Selling now" and
+            // "Completed" is two child containers in one tabbed container.
+            //
+            // Its own module-owned part rather than a fourth field on ContainerBackground,
+            // for the reason UpdateFrom6Async gives for creating that part at all and one
+            // more: ContainerBackground describes how the box is painted and shaped, and
+            // tabs change how its children are laid out - a container can be tabbed with no
+            // background at all. Not attachable, for the same reason as ContainerBackground:
+            // it means nothing on any type but Container.
+            //
+            // Same editor and stored shape as the ContainerBackground fields. The stored text
+            // is empty until the item is resaved, so the theme treats empty and "stack"
+            // alike - every container saved so far renders exactly as it does today.
+            await _contentDefinitionManager.AlterPartDefinitionAsync("ContainerTabs", part => part
+                .Attachable(false)
+                .WithDisplayName("Container Tabs")
+                .WithDescription("Show a container's child widgets as tabs.")
+                .WithField("Display", field => field
+                    .OfType("TextField")
+                    .WithDisplayName("Display")
+                    .WithEditor("PredefinedList")
+                    .WithPosition("0")
+                    .WithSettings(new TextFieldSettings
+                    {
+                        Hint = "Tabs shows one child widget at a time, labelled by each child's name."
+                    })
+                    .WithSettings(new TextFieldPredefinedListEditorSettings
+                    {
+                        Options =
+                        [
+                            new ListValueOption("Stacked", "stack"),
+                            new ListValueOption("Tabs", "tabs")
+                        ],
+                        DefaultValue = "stack",
+                        Editor = EditorOption.Dropdown
+                    })
+                )
+            );
+
+            // Position 5: after ContainerBackground (4). No guard, as in UpdateFrom6Async -
+            // the part definition is created just above.
+            await _contentDefinitionManager.AlterTypeDefinitionAsync("Container", type => type
+                .WithPart("ContainerTabs", part => part
+                    .WithPosition("5")
+                )
+            );
+
+            return 11;
         }
     }
 }
