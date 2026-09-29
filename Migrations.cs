@@ -147,10 +147,11 @@ namespace Etch.OrchardCore.Blocks
             // BackgroundInfo, ContainerBackground, ContainerTabs - has to be in that recipe
             // too or it will be missing there until a later UpdateFrom adds it. That includes
             // every field on ContainerBackground: Width, Corners, Height and the Overlay field
-            // UpdateFrom9Async adds - and ContainerTabs' Display field, part and attach both,
-            // from UpdateFrom10Async. The ContentBlock TitlePart above is the one exception,
-            // applied here as well as in UpdateFrom8Async.
-            return 11;
+            // UpdateFrom9Async adds - ContainerTabs' Display field, part and attach both,
+            // from UpdateFrom10Async, and the ContainerLink part with its five fields and its
+            // attach, from UpdateFrom11Async. The ContentBlock TitlePart above is the one
+            // exception, applied here as well as in UpdateFrom8Async.
+            return 12;
         }
 
         // Previously created Container content type - no longer needed but keeping
@@ -547,6 +548,129 @@ namespace Etch.OrchardCore.Blocks
             );
 
             return 11;
+        }
+
+        public async Task<int> UpdateFrom11Async()
+        {
+            // An opt-in link and hover effect for a container, so a container used as a card -
+            // a project tile, say: a card container holding a tile container with a background
+            // image and a heading over it - can take the reader somewhere and say so on hover,
+            // the way the town tiles on a region page do.
+            //
+            // Its own module-owned part, for the reason UpdateFrom10Async gives for
+            // ContainerTabs: a link and its hover treatment are neither how the box is painted
+            // (ContainerBackground) nor how its children are laid out (ContainerTabs), and a
+            // container can be a linked card with no background of its own. Not attachable -
+            // it means nothing on any type but Container.
+            //
+            // Every field is a TextField, the same editor and stored shape as the
+            // ContainerBackground and ContainerTabs fields, so nothing new has to be taught to
+            // the admin UI or to a recipe author. The stored text is empty until the item is
+            // resaved, so the theme treats empty and each list's default alike: an empty Url
+            // is no link, and "none" - or empty - adds no overlay and no animation. Every
+            // container saved so far therefore renders exactly as it does today.
+            //
+            // Area and target only mean anything once there is a Url; the overlay and the
+            // animation apply with or without one, so a container can have a hover effect
+            // that is not a link.
+            await _contentDefinitionManager.AlterPartDefinitionAsync("ContainerLink", part => part
+                .Attachable(false)
+                .WithDisplayName("Container Link")
+                .WithDescription("Make a container a link, with an optional hover overlay and animation.")
+                .WithField("Url", field => field
+                    .OfType("TextField")
+                    .WithDisplayName("Link URL")
+                    .WithPosition("0")
+                    .WithSettings(new TextFieldSettings
+                    {
+                        Hint = "Where the container links to, e.g. /projects/muriwai or https://example.com. Leave empty for no link."
+                    })
+                )
+                .WithField("Target", field => field
+                    .OfType("TextField")
+                    .WithDisplayName("Open link in")
+                    .WithEditor("PredefinedList")
+                    .WithPosition("1")
+                    .WithSettings(new TextFieldPredefinedListEditorSettings
+                    {
+                        Options =
+                        [
+                            new ListValueOption("Same tab", "self"),
+                            new ListValueOption("New tab", "blank")
+                        ],
+                        DefaultValue = "self",
+                        Editor = EditorOption.Dropdown
+                    })
+                )
+                .WithField("Area", field => field
+                    .OfType("TextField")
+                    .WithDisplayName("Link area")
+                    .WithEditor("PredefinedList")
+                    .WithPosition("2")
+                    .WithSettings(new TextFieldSettings
+                    {
+                        Hint = "Image only links the container's background image, or the first image container inside it."
+                    })
+                    .WithSettings(new TextFieldPredefinedListEditorSettings
+                    {
+                        Options =
+                        [
+                            new ListValueOption("Whole card", "card"),
+                            new ListValueOption("Image only", "image")
+                        ],
+                        DefaultValue = "card",
+                        Editor = EditorOption.Dropdown
+                    })
+                )
+                .WithField("Overlay", field => field
+                    .OfType("TextField")
+                    .WithDisplayName("Hover overlay")
+                    .WithEditor("PredefinedList")
+                    .WithPosition("3")
+                    .WithSettings(new TextFieldPredefinedListEditorSettings
+                    {
+                        Options =
+                        [
+                            new ListValueOption("None", "none"),
+                            new ListValueOption("Blue", "blue"),
+                            new ListValueOption("Navy", "navy"),
+                            new ListValueOption("Dark", "dark"),
+                            new ListValueOption("Light", "light")
+                        ],
+                        DefaultValue = "none",
+                        Editor = EditorOption.Dropdown
+                    })
+                )
+                .WithField("Animation", field => field
+                    .OfType("TextField")
+                    .WithDisplayName("Hover animation")
+                    .WithEditor("PredefinedList")
+                    .WithPosition("4")
+                    .WithSettings(new TextFieldPredefinedListEditorSettings
+                    {
+                        Options =
+                        [
+                            new ListValueOption("None", "none"),
+                            new ListValueOption("Image zoom", "zoom"),
+                            new ListValueOption("Card lift", "lift"),
+                            new ListValueOption("Zoom + lift", "zoom-lift")
+                        ],
+                        DefaultValue = "none",
+                        Editor = EditorOption.Dropdown
+                    })
+                )
+            );
+
+            // Position 7: after ContainerTabs (5) and the LayoutOptions part the subsidiary
+            // structure recipes attach at 6. No guard, as in UpdateFrom10Async - the part
+            // definition is created just above.
+            await _contentDefinitionManager.AlterTypeDefinitionAsync("Container", type => type
+                .WithPart("ContainerLink", part => part
+                    .WithPosition("7")
+                )
+            );
+
+            return 12;
         }
     }
 }
