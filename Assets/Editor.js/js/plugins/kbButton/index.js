@@ -10,6 +10,7 @@ const STYLES = [
   { value: 'stdredbutton', label: 'Red' },
   { value: 'stdgreybutton', label: 'Grey' },
   { value: 'stdblueclearbutton', label: 'Blue clear' },
+  { value: 'stdredclearbutton', label: 'Red clear' },
   { value: 'stdclearbutton', label: 'Clear' },
 ];
 
@@ -19,6 +20,7 @@ const STYLE_ICONS = {
   stdredbutton: '<svg width="17" height="14" viewBox="0 0 17 14"><rect x="0.5" y="0.5" width="16" height="13" rx="3" fill="#EF4123" stroke="#EF4123"/></svg>',
   stdgreybutton: '<svg width="17" height="14" viewBox="0 0 17 14"><rect x="0.5" y="0.5" width="16" height="13" rx="3" fill="#EBEBEB" stroke="#DEDEDE"/></svg>',
   stdblueclearbutton: '<svg width="17" height="14" viewBox="0 0 17 14"><rect x="0.5" y="0.5" width="16" height="13" rx="3" fill="none" stroke="#002D6A"/></svg>',
+  stdredclearbutton: '<svg width="17" height="14" viewBox="0 0 17 14"><rect x="0.5" y="0.5" width="16" height="13" rx="3" fill="none" stroke="#EF4123"/></svg>',
   stdclearbutton: '<svg width="17" height="14" viewBox="0 0 17 14"><rect x="0.5" y="0.5" width="16" height="13" rx="3" fill="none" stroke="#999"/></svg>',
 };
 

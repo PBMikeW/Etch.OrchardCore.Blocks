@@ -54,6 +54,11 @@
   border: 2px solid #002D6A;
   color: #002D6A;
 }
+.kb-button-tool__btn.stdredclearbutton {
+  background-color: transparent;
+  border: 2px solid #EF4123;
+  color: #EF4123;
+}
 .kb-button-tool__btn.stdclearbutton {
   background-color: transparent;
   border: 2px solid #999;
