@@ -35,7 +35,7 @@ public class RawBlockSaveTests
 
     private static readonly string Stored = Doc(Paragraph("p1", "Old text"), Raw("r1", StaffRaw));
 
-    private sealed class Harness
+    internal sealed class Harness
     {
         public Harness(bool canManageRawBlocks)
         {
@@ -57,10 +57,12 @@ public class RawBlockSaveTests
         public List<string> Checks { get; } = [];
 
         public RawBlockEditGuard Guard { get; }
+
+        public BlockEditGuard EditGuard => new(Guard, Sanitizers.OrchardCore(), new Localizer<BlockEditGuard>());
     }
 
     /// <summary>Binds the posted Data as the admin form would.</summary>
-    private sealed class PostedData(string data) : IUpdateModel
+    internal sealed class PostedData(string data) : IUpdateModel
     {
         public ModelStateDictionary ModelState { get; } = new();
 
@@ -88,12 +90,12 @@ public class RawBlockSaveTests
         public bool TryValidateModel(object model, string prefix) => true;
     }
 
-    private static UpdateEditorContext EditorContext(IUpdateModel updater) =>
+    internal static UpdateEditorContext EditorContext(IUpdateModel updater) =>
         new(Mock.Of<IShape>(), "", false, "", Mock.Of<IShapeFactory>(), Mock.Of<IZoneHolding>(), updater);
 
-    private static async Task<(BlockField Field, ModelStateDictionary ModelState)> SaveFieldAsync(Harness h, string stored, string posted)
+    internal static async Task<(BlockField Field, ModelStateDictionary ModelState)> SaveFieldAsync(Harness h, string stored, string posted)
     {
-        var driver = new BlockFieldDriver(Mock.Of<IBlocksParser>(), h.Guard, new Localizer<BlockFieldDriver>());
+        var driver = new BlockFieldDriver(Mock.Of<IBlocksParser>(), h.EditGuard);
         var part = new ContentPart();
         var field = new BlockField { Data = stored };
         var partDefinition = new ContentPartDefinition("Content");
@@ -107,7 +109,7 @@ public class RawBlockSaveTests
         return (field, updater.ModelState);
     }
 
-    private sealed class Localizer<T> : IStringLocalizer<T>
+    internal sealed class Localizer<T> : IStringLocalizer<T>
     {
         public LocalizedString this[string name] => new(name, name);
 
@@ -222,7 +224,7 @@ public class RawBlockSaveTests
         async Task<ModelStateDictionary> SavePartAsync(bool canManage, string posted)
         {
             var h = new Harness(canManage);
-            var driver = new BlockBodyPartDisplay(Mock.Of<IBlocksParser>(), h.Guard, new Localizer<BlockBodyPartDisplay>());
+            var driver = new BlockBodyPartDisplay(Mock.Of<IBlocksParser>(), h.EditGuard);
             var part = new BlockBodyPart { Data = Stored };
             var typePart = new ContentTypePartDefinition("BlockBodyPart", new ContentPartDefinition("BlockBodyPart"), new JsonObject());
             var updater = new PostedData(posted);

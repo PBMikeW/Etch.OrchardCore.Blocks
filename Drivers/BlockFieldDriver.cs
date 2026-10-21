@@ -2,7 +2,6 @@
 using Etch.OrchardCore.Blocks.Parsers;
 using Etch.OrchardCore.Blocks.Services;
 using Etch.OrchardCore.Blocks.ViewModels;
-using Microsoft.Extensions.Localization;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Display.Models;
 using OrchardCore.ContentManagement.Metadata.Models;
@@ -17,19 +16,16 @@ namespace Etch.OrchardCore.Blocks.Drivers
         #region Dependencies
 
         private readonly IBlocksParser _blocksParser;
-        private readonly RawBlockEditGuard _rawBlockEditGuard;
-
-        protected readonly IStringLocalizer S;
+        private readonly BlockEditGuard _blockEditGuard;
 
         #endregion
 
         #region Constructor
 
-        public BlockFieldDriver(IBlocksParser blocksParser, RawBlockEditGuard rawBlockEditGuard, IStringLocalizer<BlockFieldDriver> localizer)
+        public BlockFieldDriver(IBlocksParser blocksParser, BlockEditGuard blockEditGuard)
         {
             _blocksParser = blocksParser;
-            _rawBlockEditGuard = rawBlockEditGuard;
-            S = localizer;
+            _blockEditGuard = blockEditGuard;
         }
 
         #endregion
@@ -68,10 +64,12 @@ namespace Etch.OrchardCore.Blocks.Drivers
 
             await updater.TryUpdateModelAsync(field, Prefix, f => f.Data);
 
-            if (!await _rawBlockEditGuard.CanSaveAsync(before, field.Data))
+            var result = await _blockEditGuard.GuardAsync(before, field.Data, context.PartFieldDefinition?.DisplayName() ?? context.PartFieldDefinition?.Name);
+            field.Data = result.Data;
+
+            foreach (var error in result.Errors)
             {
-                updater.ModelState.AddModelError(Prefix, S["{0}: only users with the \"Add or edit raw HTML blocks\" permission can add a raw HTML block or change one. Remove the new or edited raw HTML block, or put its HTML back as it was, and save again. Raw HTML blocks that are already on the page can stay as they are, or be removed.",
-                    context.PartFieldDefinition?.DisplayName() ?? context.PartFieldDefinition?.Name]);
+                updater.ModelState.AddModelError(Prefix, error);
             }
 
             return Edit(field, context);

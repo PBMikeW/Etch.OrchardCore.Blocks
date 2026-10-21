@@ -2,7 +2,6 @@ using Etch.OrchardCore.Blocks.Models;
 using Etch.OrchardCore.Blocks.Parsers;
 using Etch.OrchardCore.Blocks.Services;
 using Etch.OrchardCore.Blocks.ViewModels;
-using Microsoft.Extensions.Localization;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Display.Models;
 
@@ -16,19 +15,16 @@ namespace Etch.OrchardCore.Blocks.Drivers
         #region Dependencies
 
         private readonly IBlocksParser _blocksParser;
-        private readonly RawBlockEditGuard _rawBlockEditGuard;
-
-        protected readonly IStringLocalizer S;
+        private readonly BlockEditGuard _blockEditGuard;
 
         #endregion
 
         #region Constructor
 
-        public BlockBodyPartDisplay(IBlocksParser blocksParser, RawBlockEditGuard rawBlockEditGuard, IStringLocalizer<BlockBodyPartDisplay> localizer)
+        public BlockBodyPartDisplay(IBlocksParser blocksParser, BlockEditGuard blockEditGuard)
         {
             _blocksParser = blocksParser;
-            _rawBlockEditGuard = rawBlockEditGuard;
-            S = localizer;
+            _blockEditGuard = blockEditGuard;
         }
 
         #endregion
@@ -64,9 +60,12 @@ namespace Etch.OrchardCore.Blocks.Drivers
 
             await context.Updater.TryUpdateModelAsync(part, Prefix, f => f.Data);
 
-            if (!await _rawBlockEditGuard.CanSaveAsync(before, part.Data))
+            var result = await _blockEditGuard.GuardAsync(before, part.Data, null);
+            part.Data = result.Data;
+
+            foreach (var error in result.Errors)
             {
-                context.Updater.ModelState.AddModelError(Prefix, S["Only users with the \"Add or edit raw HTML blocks\" permission can add a raw HTML block or change one. Remove the new or edited raw HTML block, or put its HTML back as it was, and save again. Raw HTML blocks that are already on the page can stay as they are, or be removed."]);
+                context.Updater.ModelState.AddModelError(Prefix, error);
             }
 
             return Edit(part, context);

@@ -5,6 +5,7 @@ using Etch.OrchardCore.Blocks.EditorJS.Parsers.Models;
 using Etch.OrchardCore.Blocks.Fields;
 using Etch.OrchardCore.Blocks.Models;
 using Etch.OrchardCore.Blocks.Parsers;
+using Etch.OrchardCore.Blocks.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -122,35 +123,7 @@ namespace Etch.OrchardCore.Blocks.EditorJS.Parsers
                 {
                     var shape = await _parsers[block.Type].RenderAsync(context, block);
 
-                    var anchor = block.GetAnchor();
-                    if (!string.IsNullOrEmpty(anchor))
-                    {
-                        shape.Anchor = anchor;
-                    }
-
-                    var alignment = block.GetAlignment();
-                    if (!string.IsNullOrEmpty(alignment))
-                    {
-                        shape.TextAlignment = alignment;
-                    }
-
-                    var (paddingTop, paddingBottom, paddingLeft, paddingRight) = block.GetPadding();
-                    if (!string.IsNullOrEmpty(paddingTop))
-                    {
-                        shape.PaddingTop = paddingTop;
-                    }
-                    if (!string.IsNullOrEmpty(paddingBottom))
-                    {
-                        shape.PaddingBottom = paddingBottom;
-                    }
-                    if (!string.IsNullOrEmpty(paddingLeft))
-                    {
-                        shape.PaddingLeft = paddingLeft;
-                    }
-                    if (!string.IsNullOrEmpty(paddingRight))
-                    {
-                        shape.PaddingRight = paddingRight;
-                    }
+                    ApplyTunes(shape, block);
 
                     shapes.Add(shape);
                 }
@@ -161,6 +134,46 @@ namespace Etch.OrchardCore.Blocks.EditorJS.Parsers
             }
 
             return await GroupInlineButtonsAsync(context, shapes);
+        }
+
+        /// <summary>
+        /// Copies the block's anchor, alignment and padding tunes onto its shape. The views (and
+        /// the themes' overrides of them) write the anchor into an <c>id</c> and the alignment into
+        /// a <c>style</c>, some of them unencoded, so only a slug anchor and a known alignment are
+        /// passed on (<see cref="BlockTunes"/>); anything else is dropped, for everyone's content.
+        /// Padding keys are only ever looked up in <c>SpacerScale.Map</c> by the views.
+        /// </summary>
+        public static void ApplyTunes(dynamic shape, Block block)
+        {
+            var anchor = BlockTunes.SafeAnchor(block.GetAnchor());
+            if (anchor != null)
+            {
+                shape.Anchor = anchor;
+            }
+
+            var alignment = BlockTunes.SafeAlignment(block.GetAlignment());
+            if (alignment != null)
+            {
+                shape.TextAlignment = alignment;
+            }
+
+            var (paddingTop, paddingBottom, paddingLeft, paddingRight) = block.GetPadding();
+            if (!string.IsNullOrEmpty(paddingTop))
+            {
+                shape.PaddingTop = paddingTop;
+            }
+            if (!string.IsNullOrEmpty(paddingBottom))
+            {
+                shape.PaddingBottom = paddingBottom;
+            }
+            if (!string.IsNullOrEmpty(paddingLeft))
+            {
+                shape.PaddingLeft = paddingLeft;
+            }
+            if (!string.IsNullOrEmpty(paddingRight))
+            {
+                shape.PaddingRight = paddingRight;
+            }
         }
 
         /// <summary>
