@@ -136,37 +136,62 @@ public class BlockSanitizeTests
     }
 
     [Theory]
-    [InlineData("color: red", true)]
-    [InlineData("color: #EF4123;", true)]
-    [InlineData("background-color: rgb(255, 191, 0); font-size: 1.25rem;", true)]
-    [InlineData("background-color: rgba(255, 191, 0, 0.5)", true)]
-    [InlineData("text-align: center", true)]
-    [InlineData("font-size: larger", true)]
-    [InlineData("position: fixed", false)]
-    [InlineData("color: red; z-index: 9999", false)]
-    [InlineData("background: url(https://evil.test/t.gif)", false)]
-    [InlineData("background-color: url(https://evil.test/t.gif)", false)]
-    [InlineData("color: expression(alert(1))", false)]
-    [InlineData("color: red /* x */", false)]
-    [InlineData("color: \\72 ed", false)]
-    [InlineData("font-size: calc(100vh)", false)]
-    [InlineData("display: block", false)]
-    [InlineData("", false)]
-    public void Only_colour_size_and_alignment_styles_are_kept(string style, bool kept)
+    [InlineData("w")]
+    [InlineData("_top")]
+    [InlineData("_self")]
+    [InlineData("_parent")]
+    public void A_target_other_than_a_new_tab_is_removed(string target)
     {
-        Assert.Equal(kept, BlockHtmlSanitizer.IsSafeStyle(style));
+        Assert.Equal("<a href=\"https://x.test/\">x</a>", Sanitize("<a href=\"https://x.test/\" target=\"" + target + "\">x</a>"));
+    }
+
+    [Theory]
+    [InlineData("color: red", "color: red")]
+    [InlineData("color: #EF4123;", "color: #EF4123;")]
+    [InlineData("background-color: rgb(255, 191, 0); font-size: 1.25rem;", "background-color: rgb(255, 191, 0); font-size: 1.25rem;")]
+    [InlineData("background-color: rgba(255, 191, 0, 0.5)", "background-color: rgba(255, 191, 0, 0.5)")]
+    [InlineData("text-align: center", "text-align: center")]
+    [InlineData("font-size: larger", "font-size: larger")]
+    // Disallowed declarations go, the allowed ones beside them stay (rewritten as the browser writes them).
+    [InlineData("box-sizing: border-box; color: rgb(0, 45, 106);", "color: rgb(0, 45, 106);")]
+    [InlineData("color: red; z-index: 9999", "color: red;")]
+    [InlineData("position:fixed;top:0;color:#fff;background:url(https://evil.test/t.gif);font-size:2rem", "color: #fff; font-size: 2rem;")]
+    [InlineData("color: url(https://evil.test/t.gif); background-color: red", "background-color: red;")]
+    // Nothing allowed: no style at all.
+    [InlineData("position: fixed", null)]
+    [InlineData("background: url(https://evil.test/t.gif)", null)]
+    [InlineData("background-color: url(https://evil.test/t.gif)", null)]
+    [InlineData("color: expression(alert(1))", null)]
+    [InlineData("font-size: calc(100vh)", null)]
+    [InlineData("display: block", null)]
+    [InlineData("color", null)]
+    [InlineData("", null)]
+    // Can't be split safely: dropped whole.
+    [InlineData("color: red /* x */", null)]
+    [InlineData("color: \\72 ed", null)]
+    public void Only_colour_size_and_alignment_declarations_are_kept(string style, string expected)
+    {
+        Assert.Equal(expected, BlockHtmlSanitizer.FilterStyle(style));
+        Assert.Equal(expected != null && expected == style, BlockHtmlSanitizer.IsSafeStyle(style));
 
         var html = Sanitize("<span style=\"" + style + "\">x</span>");
-        Assert.Equal(kept ? "<span style=\"" + style + "\">x</span>" : "<span>x</span>", html);
+        Assert.Equal(expected != null ? "<span style=\"" + expected + "\">x</span>" : "<span>x</span>", html);
+    }
+
+    [Fact]
+    public void The_agent_starter_header_colour_survives()
+    {
+        const string header = "<font style=\"box-sizing: border-box; color: rgb(0, 45, 106);\">Welcome</font>";
+
+        Assert.Equal("<font style=\"color: rgb(0, 45, 106);\">Welcome</font>", Sanitize(header));
     }
 
     [Theory]
     [InlineData("<span data-pb-block-kept-style=\"position:fixed;z-index:9\">x</span>", "<span>x</span>")]
     [InlineData("<span data-pb-block-kept-style=\"position:fixed\" style=\"color: red\">x</span>", "<span style=\"color: red\">x</span>")]
-    // Placeholder after the style: the placeholder (holding the safe style by then) is removed with the input's own.
-    // The style is lost, which only happens to hand-made markup; nothing gets in.
-    [InlineData("<span style=\"color: red\" data-pb-block-kept-style=\"position:fixed\">x</span>", "<span>x</span>")]
-    public void The_kept_style_placeholder_cannot_carry_a_style_in(string html, string expected)
+    [InlineData("<span style=\"color: red\" data-pb-block-kept-style=\"position:fixed\">x</span>", "<span style=\"color: red\">x</span>")]
+    [InlineData("<span style=\"color: red\" data-anything=\"position:fixed\">x</span>", "<span style=\"color: red\">x</span>")]
+    public void No_attribute_in_the_input_can_carry_a_style_in_or_lose_a_kept_one(string html, string expected)
     {
         Assert.Equal(expected, Sanitize(html));
     }
@@ -179,17 +204,44 @@ public class BlockSanitizeTests
     }
 
     [Theory]
-    [InlineData("<input type=\"password\">")]
-    [InlineData("<button>x</button>")]
+    [InlineData("<input type=\"password\">", "ok")]
+    [InlineData("<button>x</button>", "okx")]
+    [InlineData("<form action=\"https://evil.test\"><input name=\"p\">x</form>", "okx")]
+    [InlineData("<img src=\"https://x.test/a.png\">", "ok")]
+    [InlineData("<code>x</code>", "okx")]
+    [InlineData("<p>x</p>", "okx")]
+    [InlineData("<div style=\"position:fixed;z-index:9;background:url(https://evil.test/t.gif)\">x</div>", "okx")]
+    [InlineData("<div><p><b>x</b> y</p></div>", "ok<b>x</b> y")]
+    public void Other_elements_are_removed_and_their_text_kept(string html, string expected)
+    {
+        Assert.Equal(expected, Sanitize("ok" + html));
+    }
+
+    [Theory]
+    [InlineData("<script>alert(1)</script>")]
+    [InlineData("<style>body{display:none}</style>")]
+    [InlineData("<svg><a href=\"javascript:alert(1)\"><text>x</text></a></svg>")]
+    [InlineData("<math><mi>x</mi></math>")]
+    [InlineData("<template><img src=x onerror=alert(1)></template>")]
+    [InlineData("<noscript><b>x</b></noscript>")]
+    [InlineData("<iframe src=\"https://x.test\">x</iframe>")]
+    [InlineData("<object data=\"https://x.test/x.swf\">x</object>")]
     [InlineData("<textarea>x</textarea>")]
     [InlineData("<select><option>x</option></select>")]
-    [InlineData("<form><input></form>")]
-    [InlineData("<iframe src=\"https://x.test\"></iframe>")]
-    [InlineData("<img src=\"https://x.test/a.png\">")]
-    [InlineData("<code>x</code>")]
-    public void Anything_but_the_inline_tools_tags_is_removed(string html)
+    public void Some_elements_are_removed_with_their_content(string html)
     {
         Assert.Equal("ok", Sanitize("ok" + html));
+    }
+
+    [Theory]
+    [InlineData("<div><img src=x onerror=alert(1)><script>alert(2)</script>t</div>", "t")]
+    [InlineData("<p><a href=\"javascript:alert(1)\" onclick=\"alert(2)\">t</a></p>", "<a>t</a>")]
+    [InlineData("<div><div><span style=\"position:fixed\" onmouseover=\"alert(1)\">t</span></div></div>", "<span>t</span>")]
+    [InlineData("<form><select><option>a</option></select><button formaction=\"https://evil.test\">t</button></form>", "t")]
+    [InlineData("<p><iframe srcdoc=\"<script>alert(1)</script>\"></iframe>t</p>", "t")]
+    public void A_dangerous_child_of_a_removed_element_is_sanitised_too(string html, string expected)
+    {
+        Assert.Equal(expected, Sanitize(html));
     }
 
     [Fact]
