@@ -58,7 +58,7 @@ public class RawBlockSaveTests
 
         public RawBlockEditGuard Guard { get; }
 
-        public BlockEditGuard EditGuard => new(Guard, Sanitizers.OrchardCore(), new Localizer<BlockEditGuard>());
+        public BlockEditGuard EditGuard => new(Guard, new Localizer<BlockEditGuard>());
     }
 
     /// <summary>Binds the posted Data as the admin form would.</summary>

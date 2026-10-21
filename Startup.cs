@@ -52,11 +52,6 @@ namespace Etch.OrchardCore.Blocks
             services.AddScoped<RawBlockEditGuard>();
             services.AddScoped<BlockEditGuard>();
 
-            // Block text links may be mailto: and tel: (the editor's link tool and BlockLinkUrl
-            // allow them); the stock sanitiser keeps only http and https, so saving sanitised
-            // block text would strip them. Neither scheme can run script.
-            services.ConfigureHtmlSanitizer(BlockTextSanitizer.AllowLinkSchemes);
-
             services.AddScoped<IDataMigration, Migrations>();
 
             services.AddLiquidFilter<BlocksBuildDisplayFilter>("blocks_build_display");

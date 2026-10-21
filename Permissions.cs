@@ -14,7 +14,7 @@ namespace Etch.OrchardCore.Blocks
         /// allow them to be removed; see <see cref="Services.RawBlockEditGuard"/>.
         /// <para>Other block types' text (paragraph, heading, list, quote, captions, table cells) is
         /// written to the page unencoded too: for a user without this permission the block editors
-        /// sanitise it in new and changed blocks, keep embeds to the supported services and refuse a
+        /// sanitise it in new and changed blocks (<see cref="Services.BlockHtmlSanitizer"/>), keep embeds to the supported services and refuse a
         /// new inline SVG button icon (<see cref="Services.BlockEditGuard"/>). A user with it saves
         /// what they post. Anchor and alignment tunes are validated for everyone when rendering
         /// (<see cref="Services.BlockTunes"/>). Text already stored is not re-sanitised when rendered.</para>

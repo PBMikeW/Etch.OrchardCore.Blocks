@@ -16,15 +16,22 @@ namespace Etch.OrchardCore.Blocks.Tests;
 /// </summary>
 public class BlockSanitizeTests
 {
-    private static readonly Func<string, string> Sanitize = Sanitizers.OrchardCore().Sanitize;
+    private static readonly Func<string, string> Sanitize = BlockHtmlSanitizer.Instance.Sanitize;
 
     /// <summary>Markup that must not survive in any text property.</summary>
     private const string Injection =
         "<img src=x onerror=alert(1)><script>alert(2)</script><a href=\"javascript:alert(3)\">j</a>"
         + "<form action=\"https://evil.test\"><input name=p></form><iframe src=\"https://evil.test\"></iframe>"
-        + "<div onclick=\"alert(4)\" style=\"background:url(javascript:alert(5))\">d</div>";
+        + "<div onclick=\"alert(4)\" style=\"background:url(javascript:alert(5))\">d</div>"
+        + "<span style=\"position:fixed;top:0;left:0;width:100%;height:100%;z-index:9999\">overlay</span>"
+        + "<b style=\"background:url(https://evil.test/t.gif)\">track</b>"
+        + "<input type=\"password\" name=\"pw\"><button>go</button><textarea>t</textarea><select><option>o</option></select>";
 
-    private static readonly string[] Forbidden = ["onerror", "<script", "javascript:", "<form", "<iframe", "onclick", "alert("];
+    private static readonly string[] Forbidden =
+    [
+        "onerror", "<script", "javascript:", "<form", "<iframe", "onclick", "alert(", "<img", "<div",
+        "position", "z-index", "url(", "<input", "<button", "<textarea", "<select", "style=",
+    ];
 
     private static string Block(string id, string type, object data) => JsonConvert.SerializeObject(new { id, type, data });
 
@@ -65,7 +72,8 @@ public class BlockSanitizeTests
         Assert.Empty(result.Refusals);
         var html = (string)Saved(result).SelectToken(path)!;
         AssertClean(html);
-        Assert.Contains("<img src=\"x\">", html);
+        Assert.Contains("overlay", html);
+        Assert.Contains("<b>track</b>", html);
     }
 
     [Fact]
@@ -100,25 +108,97 @@ public class BlockSanitizeTests
     {
         const string formatted =
             "<b>bold</b> <i>italic</i> <u>under</u> <strong>strong</strong> <em>em</em><br>"
-            + "<a href=\"https://www.pb.co.nz/x\" target=\"_blank\" rel=\"nofollow\">out</a> <a href=\"/about-us#team\">in</a> "
+            + "<a href=\"https://www.pb.co.nz/x\" target=\"_blank\" rel=\"nofollow noopener noreferrer\">out</a> <a href=\"/about-us#team\">in</a> "
             + "<a href=\"mailto:a@pb.co.nz\">mail</a> <a href=\"tel:0800\">call</a> "
-            + "<font color=\"#EF4123\">red</font> <mark class=\"cdx-marker\" style=\"background-color: rgb(255, 191, 0)\">hi</mark> "
-            + "<span class=\"fontsize-tool\" style=\"font-size: 1.25rem\">big</span> <code class=\"inline-code\">c</code> &amp; &lt;tag&gt;";
+            + "<font style=\"color: rgb(239, 65, 35);\">red</font> <font color=\"#EF4123\">legacy red</font> "
+            + "<mark style=\"background-color: rgb(255, 191, 0);\">hi</mark> "
+            + "<span class=\"fontsize-tool\" style=\"font-size: 1.25rem;\">big</span> "
+            + "<font style=\"color: rgb(0, 45, 106);\"><mark style=\"background-color: rgb(255, 191, 0);\"><span class=\"fontsize-tool\" style=\"font-size: 0.8rem;\">all three</span></mark></font> "
+            + "&amp; &lt;tag&gt;&nbsp;x";
 
         var result = BlockTextSanitizer.Sanitize(null, Doc(Paragraph("p", formatted)), Sanitize);
-        var text = (string)Saved(result).SelectToken("$.blocks[0].data.text")!;
 
-        foreach (var kept in new[]
-        {
-            "<b>bold</b>", "<i>italic</i>", "<u>under</u>", "<strong>strong</strong>", "<em>em</em>", "<br>",
-            "href=\"https://www.pb.co.nz/x\"", "target=\"_blank\"", "rel=\"nofollow\"", "href=\"/about-us#team\"",
-            "href=\"mailto:a@pb.co.nz\"", "href=\"tel:0800\"",
-            "<font color=\"#EF4123\">red</font>", "class=\"cdx-marker\"", "background-color: rgba(255, 191, 0, 1)",
-            "class=\"fontsize-tool\"", "font-size: 1.25rem", "<code class=\"inline-code\">c</code>", "&amp; &lt;tag&gt;",
-        })
-        {
-            Assert.Contains(kept, text);
-        }
+        // Nothing to take out: the text is saved exactly as the editor wrote it (styles not re-serialised), so the
+        // block isn't rewritten, and doesn't count as changed again on the next save.
+        // (A new-tab link without noopener noreferrer is the one thing rewritten, once: see the next test.)
+        Assert.Equal(formatted, Sanitize(formatted));
+        Assert.False(result.Changed);
+    }
+
+    [Fact]
+    public void A_new_tab_link_gets_noopener_noreferrer()
+    {
+        Assert.Equal("<a href=\"https://x.test/\" target=\"_blank\" rel=\"nofollow noopener noreferrer\">x</a>",
+            Sanitize("<a href=\"https://x.test/\" target=\"_blank\" rel=\"nofollow\">x</a>"));
+        Assert.Equal("<a href=\"https://x.test/\" target=\"_blank\" rel=\"noopener noreferrer\">x</a>",
+            Sanitize("<a href=\"https://x.test/\" target=\"_blank\">x</a>"));
+        Assert.Equal("<a href=\"https://x.test/\">x</a>", Sanitize("<a href=\"https://x.test/\">x</a>"));
+    }
+
+    [Theory]
+    [InlineData("color: red", true)]
+    [InlineData("color: #EF4123;", true)]
+    [InlineData("background-color: rgb(255, 191, 0); font-size: 1.25rem;", true)]
+    [InlineData("background-color: rgba(255, 191, 0, 0.5)", true)]
+    [InlineData("text-align: center", true)]
+    [InlineData("font-size: larger", true)]
+    [InlineData("position: fixed", false)]
+    [InlineData("color: red; z-index: 9999", false)]
+    [InlineData("background: url(https://evil.test/t.gif)", false)]
+    [InlineData("background-color: url(https://evil.test/t.gif)", false)]
+    [InlineData("color: expression(alert(1))", false)]
+    [InlineData("color: red /* x */", false)]
+    [InlineData("color: \\72 ed", false)]
+    [InlineData("font-size: calc(100vh)", false)]
+    [InlineData("display: block", false)]
+    [InlineData("", false)]
+    public void Only_colour_size_and_alignment_styles_are_kept(string style, bool kept)
+    {
+        Assert.Equal(kept, BlockHtmlSanitizer.IsSafeStyle(style));
+
+        var html = Sanitize("<span style=\"" + style + "\">x</span>");
+        Assert.Equal(kept ? "<span style=\"" + style + "\">x</span>" : "<span>x</span>", html);
+    }
+
+    [Theory]
+    [InlineData("<span data-pb-block-kept-style=\"position:fixed;z-index:9\">x</span>", "<span>x</span>")]
+    [InlineData("<span data-pb-block-kept-style=\"position:fixed\" style=\"color: red\">x</span>", "<span style=\"color: red\">x</span>")]
+    // Placeholder after the style: the placeholder (holding the safe style by then) is removed with the input's own.
+    // The style is lost, which only happens to hand-made markup; nothing gets in.
+    [InlineData("<span style=\"color: red\" data-pb-block-kept-style=\"position:fixed\">x</span>", "<span>x</span>")]
+    public void The_kept_style_placeholder_cannot_carry_a_style_in(string html, string expected)
+    {
+        Assert.Equal(expected, Sanitize(html));
+    }
+
+    [Fact]
+    public void Only_the_font_size_class_is_kept()
+    {
+        Assert.Equal("<span class=\"fontsize-tool\">x</span>", Sanitize("<span class=\"fontsize-tool position-fixed vh-100\">x</span>"));
+        Assert.Equal("<span>x</span>", Sanitize("<span class=\"fixed-top\">x</span>"));
+    }
+
+    [Theory]
+    [InlineData("<input type=\"password\">")]
+    [InlineData("<button>x</button>")]
+    [InlineData("<textarea>x</textarea>")]
+    [InlineData("<select><option>x</option></select>")]
+    [InlineData("<form><input></form>")]
+    [InlineData("<iframe src=\"https://x.test\"></iframe>")]
+    [InlineData("<img src=\"https://x.test/a.png\">")]
+    [InlineData("<code>x</code>")]
+    public void Anything_but_the_inline_tools_tags_is_removed(string html)
+    {
+        Assert.Equal("ok", Sanitize("ok" + html));
+    }
+
+    [Fact]
+    public void The_tenant_sanitiser_is_not_changed()
+    {
+        // The block sanitiser is its own instance: no tenant-wide ConfigureHtmlSanitizer from this module.
+        var startup = File.ReadAllText(Path.Combine(ViewsFolder(), "..", "Startup.cs"));
+
+        Assert.DoesNotContain("ConfigureHtmlSanitizer", startup);
     }
 
     [Theory]
@@ -299,17 +379,23 @@ public class BlockSanitizeTests
         Assert.Equal(expected, EmbedSources.SafeSourceUrl(url));
     }
 
-    [Theory]
-    [InlineData("BlockField.cshtml")]
-    [InlineData("BlockBodyPart.cshtml")]
-    [InlineData("Block-Paragraph.cshtml")]
-    public void The_views_write_tune_attributes_encoded(string view)
+    [Fact]
+    public void No_view_writes_a_tune_through_Html_Raw()
     {
-        // Razor encodes an attribute value written as id="@x" / style="@x"; the views used to build these with Html.Raw.
-        var source = File.ReadAllText(Path.Combine(ViewsFolder(), view));
+        // The anchor, alignment and padding tunes go into attributes: written as id="@x" / style="@x" (or through a
+        // TagBuilder) they are encoded; through Html.Raw they are not. The views used to build them with Html.Raw.
+        var views = Directory.GetFiles(ViewsFolder(), "*.cshtml");
+        Assert.NotEmpty(views);
 
-        Assert.DoesNotContain("Html.Raw($\" id=", source);
-        Assert.DoesNotContain("Html.Raw($\" style=", source);
+        foreach (var view in views)
+        {
+            foreach (var line in File.ReadAllLines(view))
+            {
+                Assert.False(
+                    System.Text.RegularExpressions.Regex.IsMatch(line, @"Html\.Raw\([^\n]*(anchor|alignment|padding)", System.Text.RegularExpressions.RegexOptions.IgnoreCase),
+                    $"{Path.GetFileName(view)}: {line.Trim()}");
+            }
+        }
     }
 
     private static string ViewsFolder([CallerFilePath] string here = "") => Path.Combine(Path.GetDirectoryName(here)!, "..", "Views");

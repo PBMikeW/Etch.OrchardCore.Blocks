@@ -1,5 +1,4 @@
 using Etch.OrchardCore.Blocks.EditorJS.Parsers.Models;
-using Ganss.Xss;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
@@ -26,8 +25,8 @@ namespace Etch.OrchardCore.Blocks.Services
     /// properties unencoded (Html.Raw), and the editor's own sanitiser runs in the browser, so a
     /// hand-made save could store any markup in a paragraph. For a save by someone without
     /// ManageRawBlocks, every block that is new or changed has the HTML in its text properties run
-    /// through the site's HTML sanitiser (OrchardCore's IHtmlSanitizerService, the one the AI
-    /// editor's guard uses): paragraph and heading text, list items, quote text and caption, image
+    /// through <see cref="BlockHtmlSanitizer"/> (a sanitiser as narrow as the editor's inline
+    /// tools): paragraph and heading text, list items, quote text and caption, image
     /// and embed captions, and table cells. An embed may only load one of the supported services
     /// (<see cref="EmbedSources"/>), and a button may only keep the inline SVG icon it already had.
     /// <para>A block is unchanged when the stored content had a block of the same type with the
@@ -54,16 +53,6 @@ namespace Etch.OrchardCore.Blocks.Services
             ["image"] = ["caption"],
             ["embed"] = ["caption"],
         };
-
-        /// <summary>
-        /// Lets sanitised text keep mailto: and tel: links (registered on the tenant's sanitiser by
-        /// Startup). The stock schemes are http and https only; neither of these can run script.
-        /// </summary>
-        public static void AllowLinkSchemes(HtmlSanitizer sanitizer)
-        {
-            sanitizer.AllowedSchemes.Add("mailto");
-            sanitizer.AllowedSchemes.Add("tel");
-        }
 
         public static BlockSanitizeResult Sanitize(string before, string after, Func<string, string> sanitizeHtml)
         {

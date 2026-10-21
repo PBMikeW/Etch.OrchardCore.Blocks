@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Localization;
-using OrchardCore.Infrastructure.Html;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -26,14 +25,12 @@ namespace Etch.OrchardCore.Blocks.Services
     public class BlockEditGuard
     {
         private readonly RawBlockEditGuard _rawBlockEditGuard;
-        private readonly IHtmlSanitizerService _htmlSanitizerService;
 
         protected readonly IStringLocalizer S;
 
-        public BlockEditGuard(RawBlockEditGuard rawBlockEditGuard, IHtmlSanitizerService htmlSanitizerService, IStringLocalizer<BlockEditGuard> localizer)
+        public BlockEditGuard(RawBlockEditGuard rawBlockEditGuard, IStringLocalizer<BlockEditGuard> localizer)
         {
             _rawBlockEditGuard = rawBlockEditGuard;
-            _htmlSanitizerService = htmlSanitizerService;
             S = localizer;
         }
 
@@ -54,7 +51,7 @@ namespace Etch.OrchardCore.Blocks.Services
                 errors.Add(Message(fieldName, S["only users with the \"Add or edit raw HTML blocks\" permission can add a raw HTML block or change one. Remove the new or edited raw HTML block, or put its HTML back as it was, and save again. Raw HTML blocks that are already on the page can stay as they are, or be removed."]));
             }
 
-            var sanitized = BlockTextSanitizer.Sanitize(before, after, _htmlSanitizerService.Sanitize);
+            var sanitized = BlockTextSanitizer.Sanitize(before, after, BlockHtmlSanitizer.Instance.Sanitize);
 
             // Unreadable data is refused above (it counts as adding a raw block) unless the user
             // holds the permission; nothing here can make it safer.
