@@ -152,6 +152,27 @@ public class RawBlocksTests
         Assert.Empty(RawBlocks.FindNewOrChanged(before, after));
     }
 
+    [Theory]
+    [InlineData("<div>\r\n  <p>staff</p>\r\n</div>")]
+    [InlineData("<div>\r  <p>staff</p>\r</div>")]
+    public void A_raw_block_whose_stored_line_endings_the_textarea_normalised_is_not_reported(string storedHtml)
+    {
+        // The raw tool saves textarea.value, which turns CRLF and a lone CR into LF.
+        var before = Doc(Raw("r1", storedHtml));
+        var after = Doc(Raw("r1", "<div>\n  <p>staff</p>\n</div>"));
+
+        Assert.Empty(RawBlocks.FindNewOrChanged(before, after));
+    }
+
+    [Fact]
+    public void A_raw_block_changed_beyond_its_line_endings_is_still_reported()
+    {
+        var before = Doc(Raw("r1", "<div>\r\n</div>"));
+        var after = Doc(Raw("r1", "<div>\n<script>x</script></div>"));
+
+        Assert.Single(RawBlocks.FindNewOrChanged(before, after));
+    }
+
     [Fact]
     public void Unreadable_stored_data_counts_as_having_no_raw_blocks()
     {

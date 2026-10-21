@@ -12,6 +12,9 @@ namespace Etch.OrchardCore.Blocks
         /// form posting anywhere: whoever holds this can put any markup on the public site.
         /// Without it the block editors keep raw blocks that are already there, unchanged, and
         /// allow them to be removed; see <see cref="Services.RawBlockEditGuard"/>.
+        /// <para>This governs raw blocks only. It does not by itself stop markup reaching the page
+        /// through other block types: their text properties (paragraph, heading, list, quote,
+        /// captions) and tunes are rendered unencoded too, and are not sanitised on save.</para>
         /// </summary>
         public static readonly Permission ManageRawBlocks = new("ManageRawBlocks", "Add or edit raw HTML blocks", isSecurityCritical: true);
 

@@ -52,7 +52,8 @@ namespace Etch.OrchardCore.Blocks.Services
         /// and the same HTML. A block whose id <paramref name="before"/>'s raw blocks don't have
         /// (content saved before Editor.js gave blocks ids, or a raw block moved into or out of
         /// columns) is unchanged when <paramref name="before"/> held a raw block with the same HTML.
-        /// A raw block that was removed is not reported: removing one is always allowed.
+        /// A raw block that was removed is not reported: removing one is always allowed. Line endings
+        /// are compared normalised (<see cref="NormalizeLineEndings"/>).
         /// <para>Throws when <paramref name="after"/> can't be read. When <paramref name="before"/>
         /// can't be read it is taken to have no raw blocks, so every raw block in
         /// <paramref name="after"/> counts as new.</para>
@@ -83,17 +84,25 @@ namespace Etch.OrchardCore.Blocks.Services
                     storedById[block.Id] = htmls = [];
                 }
 
-                htmls.Add(block.Html);
+                htmls.Add(NormalizeLineEndings(block.Html));
             }
 
-            var storedHtml = new HashSet<string>(stored.Select(b => b.Html), StringComparer.Ordinal);
+            var storedHtml = new HashSet<string>(stored.Select(b => NormalizeLineEndings(b.Html)), StringComparer.Ordinal);
 
             return current
                 .Where(block => !string.IsNullOrEmpty(block.Id) && storedById.TryGetValue(block.Id, out var htmls)
-                    ? !htmls.Contains(block.Html, StringComparer.Ordinal)
-                    : !storedHtml.Contains(block.Html))
+                    ? !htmls.Contains(NormalizeLineEndings(block.Html), StringComparer.Ordinal)
+                    : !storedHtml.Contains(NormalizeLineEndings(block.Html)))
                 .ToList();
         }
+
+        /// <summary>
+        /// The raw tool saves its textarea's value, and a textarea normalises CRLF and a lone CR to
+        /// LF: HTML stored with CRLF comes back with LF when it was left alone. A line ending is
+        /// not a change that can add markup.
+        /// </summary>
+        public static string NormalizeLineEndings(string html)
+            => html?.Replace("\r\n", "\n").Replace('\r', '\n');
 
         private static void Collect(IEnumerable<Block> blocks, List<RawBlock> found)
         {
