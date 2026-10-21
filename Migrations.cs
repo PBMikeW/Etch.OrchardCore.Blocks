@@ -1,10 +1,17 @@
+using System;
 using System.Linq;
+using System.Security.Claims;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Settings;
 using OrchardCore.Data.Migration;
+using OrchardCore.Security;
+using OrchardCore.Security.Permissions;
+using OrchardCore.Security.Services;
 
 namespace Etch.OrchardCore.Blocks
 {
@@ -98,11 +105,13 @@ namespace Etch.OrchardCore.Blocks
     {
         private readonly IContentDefinitionManager _contentDefinitionManager;
         private readonly ILogger<Migrations> _logger;
+        private readonly IServiceProvider _serviceProvider;
 
-        public Migrations(IContentDefinitionManager contentDefinitionManager, ILogger<Migrations> logger)
+        public Migrations(IContentDefinitionManager contentDefinitionManager, ILogger<Migrations> logger, IServiceProvider serviceProvider)
         {
             _contentDefinitionManager = contentDefinitionManager;
             _logger = logger;
+            _serviceProvider = serviceProvider;
         }
 
         public async Task<int> CreateAsync()
@@ -150,8 +159,9 @@ namespace Etch.OrchardCore.Blocks
             // UpdateFrom9Async adds - ContainerTabs' Display field, part and attach both,
             // from UpdateFrom10Async, and the ContainerLink part with its five fields and its
             // attach, from UpdateFrom11Async. The ContentBlock TitlePart above is the one
-            // exception, applied here as well as in UpdateFrom8Async.
-            return 12;
+            // exception, applied here as well as in UpdateFrom8Async. UpdateFrom12Async's raw
+            // HTML block permission comes to a fresh install from Permissions' default stereotypes.
+            return 13;
         }
 
         // Previously created Container content type - no longer needed but keeping
@@ -671,6 +681,49 @@ namespace Etch.OrchardCore.Blocks
             );
 
             return 12;
+        }
+
+        // Permissions.ManageRawBlocks is new to a tenant that already had this feature, and
+        // OrchardCore grants a permission's default roles (its stereotypes) only when a feature
+        // is first installed or a role is created. Until now anyone who could edit a block field
+        // could add raw HTML. Keep that for the roles that can edit all content (EditContent, or
+        // PublishContent, which implies it) - the staff editor roles - so nobody who uses raw
+        // blocks today is cut off. Roles that can only edit particular types (an agent's own
+        // pages, a project editor's) don't get it, and from now on can keep and remove the raw
+        // blocks already on their pages but not add or change one. The administrator role holds
+        // every permission already. Grant it to anyone else in Security > Roles.
+        public async Task<int> UpdateFrom12Async()
+        {
+            var roleService = _serviceProvider.GetService<IRoleService>();
+            var roleManager = _serviceProvider.GetService<RoleManager<IRole>>();
+
+            if (roleService == null || roleManager == null)
+            {
+                return 13;
+            }
+
+            foreach (var role in await roleService.GetRolesAsync())
+            {
+                if (await roleService.IsAdminRoleAsync(role.RoleName))
+                {
+                    continue;
+                }
+
+                var granted = (await roleManager.GetClaimsAsync(role))
+                    .Where(claim => claim.Type == Permission.ClaimType)
+                    .Select(claim => claim.Value)
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+                if (granted.Contains(Permissions.ManageRawBlocks.Name) || !(granted.Contains("EditContent") || granted.Contains("PublishContent")))
+                {
+                    continue;
+                }
+
+                await roleManager.AddClaimAsync(role, new Claim(Permission.ClaimType, Permissions.ManageRawBlocks.Name));
+                _logger.LogInformation("Granted {Permission} to role {Role}, which can edit all content.", Permissions.ManageRawBlocks.Name, role.RoleName);
+            }
+
+            return 13;
         }
     }
 }

@@ -10,6 +10,8 @@
     <Authors>Etch UK</Authors>
     <Description>Orchard Core module enables content to be defined with a block based editor.</Description>
     <PackageTags>orchardcore;etchuk</PackageTags>
+    <!-- The test project lives in Tests/ inside this project's folder: keep it out of the module. -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);Tests\**</DefaultItemExcludes>
   </PropertyGroup>
 
   <ItemGroup>
