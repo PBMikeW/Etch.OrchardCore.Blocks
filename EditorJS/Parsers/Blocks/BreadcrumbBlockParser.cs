@@ -19,7 +19,8 @@ namespace Etch.OrchardCore.Blocks.EditorJS.Parsers.Blocks
                     items.Add(new BreadcrumbItem
                     {
                         Label = jItem["label"]?.ToString() ?? string.Empty,
-                        Url = jItem["url"]?.ToString() ?? string.Empty
+                        // The view writes it into an href: only a safe link.
+                        Url = BlockLinkUrl.SafeLinkUrl(jItem["url"]?.ToString())
                     });
                 }
             }

@@ -18,7 +18,8 @@ namespace Etch.OrchardCore.Blocks.EditorJS.Parsers.Blocks
                     Profile = GetProfile(block),
                     Stretched = block.Get("stretched", false),
                     Url = GetMediaUrl(context, block),
-                    LinkUrl = block.Get("linkUrl"),
+                    // Views write it into an href: only a safe link (http, https, mailto, tel or relative).
+                    LinkUrl = BlockLinkUrl.SafeLinkUrl(block.Get("linkUrl")),
                     LinkNewTab = block.Get("linkNewTab", false),
                 }
             );

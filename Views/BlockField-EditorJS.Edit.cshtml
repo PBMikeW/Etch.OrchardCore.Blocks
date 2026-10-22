@@ -4,6 +4,7 @@
 @model Etch.OrchardCore.Blocks.ViewModels.EditBlockFieldViewModel
 
 @inject OrchardCore.Environment.Shell.IShellFeaturesManager ShellFeaturesManager
+@inject Etch.OrchardCore.Blocks.Services.RawBlockEditGuard RawBlockEditGuard
 
 @{
     var isEditorJSEnabled = (await ShellFeaturesManager.GetEnabledFeaturesAsync()).Any(x => x.Id == "Etch.OrchardCore.Blocks.EditorJS");
@@ -13,6 +14,9 @@
     var tenantPath = Context.Request.PathBase.ToString();
 
     var settings = Model.PartFieldDefinition.GetSettings<BlockFieldSettings>();
+
+    // Cosmetic: hides the raw HTML tool and locks existing raw blocks. The drivers enforce it.
+    var allowRawBlocks = await RawBlockEditGuard.CanManageRawBlocksAsync();
 }
 
 @if (isEditorJSEnabled)
@@ -25,7 +29,7 @@
 
     <script at="Foot">
         initializeMediaApplication(false, '@Url.Action("MediaApplication", "Admin", new { area = "OrchardCore.Media" })');
-        initializeEditorJS('@tenantPath', '@Html.IdFor(m => m)', '@Html.IdFor(m => m.Data)', '', '@partName', '@fieldName', '@settings.Placeholder');
+        initializeEditorJS('@tenantPath', '@Html.IdFor(m => m)', '@Html.IdFor(m => m.Data)', '', '@partName', '@fieldName', '@settings.Placeholder', { allowRawBlocks: @(allowRawBlocks ? "true" : "false") });
     </script>
 
     <div class="mb-3">

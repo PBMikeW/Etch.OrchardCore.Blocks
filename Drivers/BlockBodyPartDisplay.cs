@@ -1,5 +1,6 @@
 using Etch.OrchardCore.Blocks.Models;
 using Etch.OrchardCore.Blocks.Parsers;
+using Etch.OrchardCore.Blocks.Services;
 using Etch.OrchardCore.Blocks.ViewModels;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Display.Models;
@@ -14,14 +15,16 @@ namespace Etch.OrchardCore.Blocks.Drivers
         #region Dependencies
 
         private readonly IBlocksParser _blocksParser;
+        private readonly BlockEditGuard _blockEditGuard;
 
         #endregion
 
         #region Constructor
 
-        public BlockBodyPartDisplay(IBlocksParser blocksParser)
+        public BlockBodyPartDisplay(IBlocksParser blocksParser, BlockEditGuard blockEditGuard)
         {
             _blocksParser = blocksParser;
+            _blockEditGuard = blockEditGuard;
         }
 
         #endregion
@@ -51,7 +54,19 @@ namespace Etch.OrchardCore.Blocks.Drivers
 
         public override async Task<IDisplayResult> UpdateAsync(BlockBodyPart part, UpdatePartEditorContext context)
         {
+            // The part as stored (a new item's is empty): what a save without the raw block
+            // permission is judged against.
+            var before = part.Data;
+
             await context.Updater.TryUpdateModelAsync(part, Prefix, f => f.Data);
+
+            var result = await _blockEditGuard.GuardAsync(before, part.Data, null);
+            part.Data = result.Data;
+
+            foreach (var error in result.Errors)
+            {
+                context.Updater.ModelState.AddModelError(Prefix, error);
+            }
 
             return Edit(part, context);
         }

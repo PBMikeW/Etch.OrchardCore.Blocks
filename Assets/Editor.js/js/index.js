@@ -39,6 +39,20 @@ attachPopoverFlip();
 // no button to hang under). Page-wide and idempotent for the same reason.
 attachPopoverAnchor();
 
+// The raw HTML tool for someone without the "Add or edit raw HTML blocks" permission
+// (ManageRawBlocks): left out of the toolbox, and raw blocks the content already has are
+// shown read-only, so they are kept exactly as they are (or can be deleted). Cosmetic only:
+// the server refuses a save that adds a raw block or changes one's HTML without the permission.
+class LockedRaw extends Raw {
+    static get toolbox() {
+        return undefined;
+    }
+
+    constructor(args = {}) {
+        super({ ...args, readOnly: true });
+    }
+}
+
 window.initializeEditorJS = (
   tenantPath,
   id,
@@ -46,8 +60,12 @@ window.initializeEditorJS = (
   typeName,
   partName,
   fieldName,
-  placeholder
+  placeholder,
+  options = {}
 ) => {
+  // Older callers pass no options: the server still enforces the permission.
+  const allowRawBlocks = options.allowRawBlocks !== false;
+
   const $hiddenField = document.getElementById(hiddenFieldId);
 
   if (!$hiddenField) {
@@ -194,7 +212,7 @@ window.initializeEditorJS = (
             class: Quote,
             inlineToolbar: true,
         },
-        raw: Raw,
+        raw: allowRawBlocks ? Raw : LockedRaw,
         table: {
             class: Table,
             inlineToolbar: true,
