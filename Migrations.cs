@@ -1,8 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
+using Etch.OrchardCore.Blocks.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -160,8 +162,9 @@ namespace Etch.OrchardCore.Blocks
             // from UpdateFrom10Async, and the ContainerLink part with its five fields and its
             // attach, from UpdateFrom11Async. The ContentBlock TitlePart above is the one
             // exception, applied here as well as in UpdateFrom8Async. UpdateFrom12Async's raw
-            // HTML block permission comes to a fresh install from Permissions' default stereotypes.
-            return 13;
+            // HTML block permission comes to a fresh install from Permissions' default stereotypes, and
+            // so needs nothing from UpdateFrom13Async's correction.
+            return 14;
         }
 
         // Previously created Container content type - no longer needed but keeping
@@ -686,12 +689,13 @@ namespace Etch.OrchardCore.Blocks
         // Permissions.ManageRawBlocks is new to a tenant that already had this feature, and
         // OrchardCore grants a permission's default roles (its stereotypes) only when a feature
         // is first installed or a role is created. Until now anyone who could edit a block field
-        // could add raw HTML. Keep that for the roles that can edit all content (EditContent, or
-        // PublishContent, which implies it) - the staff editor roles - so nobody who uses raw
-        // blocks today is cut off. Roles that can only edit particular types (an agent's own
-        // pages, a project editor's) don't get it, and from now on can keep and remove the raw
-        // blocks already on their pages but not add or change one. The administrator role holds
-        // every permission already. Grant it to anyone else in Security > Roles.
+        // could add raw HTML. Keep that for the staff editor roles, the ones RawBlockRoles.Qualifies
+        // accepts: they reach the admin and can edit all content, and they are not Anonymous,
+        // Authenticated, Registered Users, Agents or Project editor. Nobody who uses raw blocks
+        // today is cut off. Everyone else - customers, agents, project editors, type-scoped roles -
+        // can keep and remove the raw blocks already on their pages but not add or change one.
+        // The administrator role holds every permission already and is left alone. Grant it to
+        // anyone else in Security > Roles.
         public async Task<int> UpdateFrom12Async()
         {
             var roleService = _serviceProvider.GetService<IRoleService>();
@@ -706,24 +710,94 @@ namespace Etch.OrchardCore.Blocks
             {
                 if (await roleService.IsAdminRoleAsync(role.RoleName))
                 {
+                    _logger.LogInformation("{Permission}: skipped role {Role}, the administrator role, which holds every permission.", Permissions.ManageRawBlocks.Name, role.RoleName);
                     continue;
                 }
 
-                var granted = (await roleManager.GetClaimsAsync(role))
-                    .Where(claim => claim.Type == Permission.ClaimType)
-                    .Select(claim => claim.Value)
-                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
+                var granted = await PermissionsOfAsync(roleManager, role);
 
-                if (granted.Contains(Permissions.ManageRawBlocks.Name) || !(granted.Contains("EditContent") || granted.Contains("PublishContent")))
+                if (granted.Contains(Permissions.ManageRawBlocks.Name))
                 {
+                    _logger.LogInformation("{Permission}: skipped role {Role}, which already holds it.", Permissions.ManageRawBlocks.Name, role.RoleName);
+                    continue;
+                }
+
+                if (!RawBlockRoles.Qualifies(role.RoleName, granted, out var reason))
+                {
+                    _logger.LogInformation("{Permission}: not granted to role {Role}, because {Reason}.", Permissions.ManageRawBlocks.Name, role.RoleName, reason);
                     continue;
                 }
 
                 await roleManager.AddClaimAsync(role, new Claim(Permission.ClaimType, Permissions.ManageRawBlocks.Name));
-                _logger.LogInformation("Granted {Permission} to role {Role}, which can edit all content.", Permissions.ManageRawBlocks.Name, role.RoleName);
+                _logger.LogInformation("{Permission}: granted to role {Role}, because {Reason}.", Permissions.ManageRawBlocks.Name, role.RoleName, reason);
             }
 
             return 13;
         }
+
+        // The first UpdateFrom12Async granted ManageRawBlocks to every non-administrator role
+        // holding EditContent or PublishContent. On www that included Authenticated and Registered
+        // Users, so every signed-in customer could put raw HTML on the site; on agent sites it
+        // could include Agents. Take it back from every role RawBlockRoles.Qualifies does not
+        // accept, so a tenant that ran that step ends up where the corrected step leaves a new one.
+        // That includes a grant an administrator made by hand: the permission was a day old when
+        // this ran, so any grant outside the rule came from the bad step. Re-grant one in
+        // Security > Roles if it was meant. The administrator role is left alone.
+        public async Task<int> UpdateFrom13Async()
+        {
+            var roleService = _serviceProvider.GetService<IRoleService>();
+            var roleManager = _serviceProvider.GetService<RoleManager<IRole>>();
+
+            if (roleService == null || roleManager == null)
+            {
+                return 14;
+            }
+
+            foreach (var role in await roleService.GetRolesAsync())
+            {
+                if (await roleService.IsAdminRoleAsync(role.RoleName))
+                {
+                    _logger.LogInformation("{Permission}: skipped role {Role}, the administrator role, which holds every permission.", Permissions.ManageRawBlocks.Name, role.RoleName);
+                    continue;
+                }
+
+                var claims = (await roleManager.GetClaimsAsync(role))
+                    .Where(claim => claim.Type == Permission.ClaimType)
+                    .ToList();
+                var rawBlockClaims = claims
+                    .Where(claim => string.Equals(claim.Value, Permissions.ManageRawBlocks.Name, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+
+                if (rawBlockClaims.Count == 0)
+                {
+                    _logger.LogInformation("{Permission}: skipped role {Role}, which does not hold it.", Permissions.ManageRawBlocks.Name, role.RoleName);
+                    continue;
+                }
+
+                var granted = claims.Select(claim => claim.Value).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+                if (RawBlockRoles.Qualifies(role.RoleName, granted, out var reason))
+                {
+                    _logger.LogInformation("{Permission}: kept on role {Role}, because {Reason}.", Permissions.ManageRawBlocks.Name, role.RoleName, reason);
+                    continue;
+                }
+
+                // One remove per claim value as stored: OrchardCore's RoleStore matches the value exactly.
+                foreach (var claim in rawBlockClaims.DistinctBy(claim => claim.Value))
+                {
+                    await roleManager.RemoveClaimAsync(role, new Claim(Permission.ClaimType, claim.Value));
+                }
+
+                _logger.LogWarning("{Permission}: revoked from role {Role}, because {Reason}.", Permissions.ManageRawBlocks.Name, role.RoleName, reason);
+            }
+
+            return 14;
+        }
+
+        private static async Task<HashSet<string>> PermissionsOfAsync(RoleManager<IRole> roleManager, IRole role) =>
+            (await roleManager.GetClaimsAsync(role))
+                .Where(claim => claim.Type == Permission.ClaimType)
+                .Select(claim => claim.Value)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
     }
 }
