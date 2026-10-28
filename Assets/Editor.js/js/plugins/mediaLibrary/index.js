@@ -18,7 +18,10 @@ export default class MediaLibraryTool {
       patterns: {
         image: /https?:\/\/\S+\.(gif|jpe?g|tiff|png)$/i,
       },
-      tags: ['IMG'],
+      // The object form is a sanitize config: Editor.js strips every attribute
+      // of a pasted tag it is not told to keep, so the plain 'IMG' form handed
+      // onPaste an <img> with no src (and no alt) at all.
+      tags: [{ img: { src: true, alt: true } }],
     };
   }
 
@@ -30,9 +33,13 @@ export default class MediaLibraryTool {
     };
   }
 
-  constructor({ data, config, api }) {
+  constructor({ data, config, api, block }) {
     this.api = api;
     this.config = config || {};
+    // The Block API for this block: the alt input lives in the settings popover,
+    // outside the editor's content area, so its MutationObserver never sees a
+    // keystroke there and the change is reported by hand (dispatchChange).
+    this.block = block;
 
         this.data = {
             // The media path is what the published site renders from:
@@ -44,6 +51,10 @@ export default class MediaLibraryTool {
             mediaPath: data.mediaPath || '',
             url: data.url || '',
             baseUrl: data.baseUrl || data.url,
+            // Plain-text alt for the <img>. Blocks saved before the field existed
+            // have none, and the site then falls back to the caption's text (and
+            // to alt="" without one), exactly as it always has.
+            alt: typeof data.alt === 'string' ? data.alt : '',
             caption: data.caption || '',
             stretched: data.stretched !== undefined ? data.stretched : false,
             alignment: data.alignment || 'center',
@@ -83,6 +94,8 @@ export default class MediaLibraryTool {
 
     this.ui = new Ui(this.api, () => {
       this._openMediaLibrary();
+    }, () => {
+      this._openSettings();
     });
   }
 
@@ -107,6 +120,8 @@ export default class MediaLibraryTool {
                 this._setMedia({
                     mediaPath: imgTag.src,
                     url: imgTag.src,
+                    // A pasted <img> may already say what it shows.
+                    alt: imgTag.getAttribute('alt') || '',
                 });
 
                 break;
@@ -122,6 +137,56 @@ export default class MediaLibraryTool {
     }
 
     renderSettings() {
+        // -- Alt text: what a screen reader (and a search engine) is told the
+        // image shows. First in the popover, so the "No alt text" prompt on the
+        // block opens straight onto it. Plain text: the site attribute-encodes it.
+        const altSection = document.createElement('div');
+        altSection.className = 'media-library-alt-settings';
+
+        const altInputId = `${this.config.id || 'editorjs'}-image-alt-${Math.random().toString(36).slice(2, 8)}`;
+
+        const altLabel = document.createElement('label');
+        altLabel.className = 'media-library-link-settings__label';
+        altLabel.htmlFor = altInputId;
+        altLabel.textContent = 'Alt text';
+
+        const altInput = document.createElement('input');
+        altInput.id = altInputId;
+        altInput.className = 'media-library-link-settings__input media-library-alt-settings__input';
+        altInput.type = 'text';
+        altInput.value = this.data.alt || '';
+        altInput.placeholder = 'Describe what the image shows';
+        altInput.addEventListener('input', (e) => {
+            this.data.alt = e.target.value;
+            this._refreshAltHint();
+            this._dispatchChange();
+        });
+        // Stops the bubble-phase block and popover handlers seeing keys typed
+        // here. It cannot stop Editor.js's own document listener, which runs in
+        // the capture phase before this one; that one is harmless here: its
+        // Backspace/Delete path removes selected blocks only when the page has
+        // no selection (a focused input always gives one), and its Enter path
+        // returns while the settings popover is open. Checked on Editor.js
+        // 2.31.6 in Chromium and Firefox: Backspace, Delete, Enter, Space,
+        // arrows, Ctrl+Z and Ctrl+A edit the field and leave the blocks alone.
+        altInput.addEventListener('keydown', (e) => {
+            e.stopPropagation();
+        });
+
+        const altHelp = document.createElement('div');
+        altHelp.className = 'media-library-alt-settings__help';
+        altHelp.textContent = 'Not shown on the page. Without it the caption is used; leave both empty only for a purely decorative image.';
+
+        altSection.appendChild(altLabel);
+        altSection.appendChild(altInput);
+        altSection.appendChild(altHelp);
+
+        // Opened from the block's "Add alt text" prompt: put the cursor in the field.
+        if (this.focusAltOnSettings) {
+            this.focusAltOnSettings = false;
+            setTimeout(() => altInput.focus(), 0);
+        }
+
         // -- Link settings section (URL + new tab checkbox) --
         const linkSection = document.createElement('div');
         linkSection.className = 'media-library-link-settings';
@@ -138,7 +203,8 @@ export default class MediaLibraryTool {
         linkInput.addEventListener('input', (e) => {
             this.data.linkUrl = e.target.value;
         });
-        // Prevent EditorJS from closing settings popover on Enter
+        // Same as the alt field above: stops bubble-phase handlers only; Editor.js's
+        // capture-phase document listener leaves keys in this field alone.
         linkInput.addEventListener('keydown', (e) => {
             e.stopPropagation();
         });
@@ -252,6 +318,10 @@ export default class MediaLibraryTool {
         return [
             {
                 type: 'html',
+                element: altSection,
+            },
+            {
+                type: 'html',
                 element: linkSection,
             },
             { type: 'separator' },
@@ -264,7 +334,75 @@ export default class MediaLibraryTool {
 
     save() {
         this.data.caption = this.ui.getCaption();
-        return this.data;
+
+        const output = { ...this.data };
+        const alt = typeof output.alt === 'string' ? output.alt.trim() : '';
+
+        // Only a block that has alt text stores the key, so a block nobody gave
+        // alt text saves exactly the data it did before the field existed.
+        if (alt) {
+            output.alt = alt;
+        } else {
+            delete output.alt;
+        }
+
+        return output;
+    }
+
+    /**
+     * Shows or hides the block's "No alt text" prompt: a flag, never a block on
+     * saving. Only an image that is there and has neither alt text nor a
+     * caption gets it.
+     */
+    _refreshAltHint() {
+        this.ui.applyAltHint(this.data);
+    }
+
+    /**
+     * Tells Editor.js this block changed, so onChange saves the document to the
+     * form's hidden field (and the undo history records it). Needed for edits
+     * made in the settings popover, which Editor.js does not observe.
+     */
+    _dispatchChange() {
+        if (this.block && typeof this.block.dispatchChange === 'function') {
+            this.block.dispatchChange();
+        }
+    }
+
+    /**
+     * Opens this block's settings popover with the cursor in the alt field.
+     * Used by the "Add alt text" prompt on the block.
+     */
+    _openSettings() {
+        const toolbar = this.api.toolbar;
+
+        if (!toolbar || typeof toolbar.toggleBlockSettings !== 'function') {
+            return;
+        }
+
+        // The settings popover opens for the editor's current block, and a click
+        // on this button does not make its block current: put the caret in this
+        // block's caption first, which does.
+        const index = this.block && this.block.id && typeof this.api.blocks.getBlockIndex === 'function'
+            ? this.api.blocks.getBlockIndex(this.block.id)
+            : -1;
+
+        if (index >= 0 && this.api.caret && typeof this.api.caret.setToBlock === 'function') {
+            this.api.caret.setToBlock(index, 'end');
+        }
+
+        this.focusAltOnSettings = true;
+
+        // Editor.js places that caret on a 20ms debounce; open the popover after
+        // it, so the focus renderSettings gives the alt field is not taken back.
+        setTimeout(() => {
+            toolbar.toggleBlockSettings(true);
+
+            // renderSettings has run (and used the flag) if the popover opened.
+            // If it did not, drop the flag so a later, unrelated settings open
+            // does not pull the cursor into the alt field.
+            this.focusAltOnSettings = false;
+        }, 50);
     }
 
     /**
@@ -468,6 +606,9 @@ export default class MediaLibraryTool {
 
         this.data = {
             caption: '',
+            // Alt text describes an image, so a different image starts without
+            // one (as it starts without a caption) unless it brings its own.
+            alt: media.alt || '',
             mediaPath: media.mediaPath,
             url: url,
             baseUrl: media.url,
