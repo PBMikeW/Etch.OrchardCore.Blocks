@@ -37,10 +37,12 @@ const buttonIcon = `<svg width="20" height="20" viewBox="0 0 20 20" xmlns="http:
 </svg >`;
 
 export default class Ui {
-    constructor(api, onSelectFile) {
+    constructor(api, onSelectFile, onAddAlt) {
         this.api = api;
         this.onSelectFile = onSelectFile;
+        this.onAddAlt = onAddAlt;
         this.nodes = {
+            altHint: this.createAltHint(),
             caption: make('div', ['cdx-input', 'media-library-item__caption'], {
                 contentEditable: true,
             }),
@@ -56,7 +58,14 @@ export default class Ui {
         this.nodes.imageWrapper.appendChild(this.nodes.image);
         this.nodes.item.appendChild(this.nodes.imageWrapper);
         this.nodes.item.appendChild(this.nodes.caption);
+        this.nodes.item.appendChild(this.nodes.altHint);
         this.nodes.wrapper.appendChild(this.nodes.item);
+
+        // Typing a caption gives the image an alt (the site falls back to it), so
+        // the prompt follows the caption as it is typed.
+        this.nodes.caption.addEventListener('input', () => {
+            this.applyAltHint(this.lastToolData);
+        });
 
         this.nodes.wrapper.appendChild(this.nodes.fileButton);
 
@@ -76,6 +85,43 @@ export default class Ui {
         });
 
         return button;
+    }
+
+    /**
+     * The "No alt text" prompt under the image: a nudge, never a block on
+     * saving. It is a button that opens the block settings on the alt field.
+     * It is editor chrome only -- save() reads the caption node and this.data,
+     * never this element.
+     */
+    createAltHint() {
+        const hint = make('button', ['media-library-item__alt-hint'], {
+            type: 'button',
+            hidden: true,
+        });
+
+        hint.textContent = 'No alt text: add a short description for screen readers';
+        hint.title = 'Opens the image settings on the Alt text field';
+
+        hint.addEventListener('click', () => {
+            if (this.onAddAlt) {
+                this.onAddAlt();
+            }
+        });
+
+        return hint;
+    }
+
+    /**
+     * Shows the prompt only for an image that is there and has neither alt text
+     * nor caption text (the site uses the caption's text when there is no alt).
+     */
+    applyAltHint(toolData) {
+        const data = toolData || {};
+        const hasImage = !!data.url;
+        const hasAlt = typeof data.alt === 'string' && data.alt.trim() !== '';
+        const hasCaption = (this.nodes.caption.textContent || '').trim() !== '';
+
+        this.nodes.altHint.hidden = !hasImage || hasAlt || hasCaption;
     }
 
     applyAlignment(alignment) {
@@ -147,6 +193,9 @@ export default class Ui {
 
         this.nodes.caption.innerHTML = toolData.caption;
         this.applyAlignment(toolData.alignment);
+
+        this.lastToolData = toolData;
+        this.applyAltHint(toolData);
 
         if (!toolData.url) {
             this.nodes.wrapper.classList.add('is-empty');

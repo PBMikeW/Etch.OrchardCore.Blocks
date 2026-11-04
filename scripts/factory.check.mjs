@@ -519,4 +519,41 @@ await check("pickMedia replaces the media modal and select(paths) sets the image
   assert.equal(tool.data.mediaPath, "x/y.png", "an empty pick changes nothing");
 });
 
+await check("raw HTML tool is locked without ManageRawBlocks (allowRawBlocks: false), full otherwise", async () => {
+  const { LockedRaw } = await import(jsRoot + "factory.js");
+  const Raw = Object.getPrototypeOf(LockedRaw);
+
+  const open = await createBlockEditor(addElement("raw-default"), { tenantPath: "/t", undo: "off" });
+  assert.equal(lastEditor().config.tools.raw, Raw, "factory default keeps the full raw tool");
+  open.destroy();
+
+  const locked = await createBlockEditor(addElement("raw-locked"), { tenantPath: "/t", undo: "off", allowRawBlocks: false });
+  assert.equal(lastEditor().config.tools.raw, LockedRaw, "factory locks raw when asked");
+  locked.destroy();
+
+  const excluded = await createBlockEditor(addElement("raw-excluded"), {
+    tenantPath: "/t",
+    undo: "off",
+    allowRawBlocks: false,
+    tools: { exclude: ["raw"] },
+  });
+  assert.ok(!("raw" in lastEditor().config.tools), "tools.exclude still drops raw");
+  excluded.destroy();
+
+  assert.equal(LockedRaw.toolbox, undefined, "locked raw has no toolbox entry");
+  assert.equal(new LockedRaw({ data: { html: "<b>x</b>" } }).args.readOnly, true, "locked raw renders read-only");
+
+  addElement("RawField_Data");
+  addElement("RawField");
+  window.initializeEditorJS("/tenant", "RawField", "RawField_Data", "Article", "BlockBodyPart", "", "", {
+    allowRawBlocks: false,
+  });
+  assert.equal(lastEditor().config.tools.raw, LockedRaw, "initializeEditorJS honours { allowRawBlocks: false }");
+
+  addElement("RawOld_Data");
+  addElement("RawOld");
+  window.initializeEditorJS("/tenant", "RawOld", "RawOld_Data", "Article", "BlockBodyPart", "", "");
+  assert.equal(lastEditor().config.tools.raw, Raw, "older callers with no options keep the full raw tool");
+});
+
 console.log(`\n${passed} checks passed`);

@@ -109,6 +109,20 @@ class ColorTool extends withScopedSurround(withScopedActiveState(withDefaultConf
 
 const MarkerTool = withScopedSurround(withScopedActiveState(withDefaultConfig(TextColor, markerToolConfig)));
 
+// The raw HTML tool for someone without the "Add or edit raw HTML blocks" permission
+// (ManageRawBlocks): left out of the toolbox, and raw blocks the content already has are
+// shown read-only, so they are kept exactly as they are (or can be deleted). Cosmetic only:
+// the server refuses a save that adds a raw block or changes one's HTML without the permission.
+export class LockedRaw extends Raw {
+  static get toolbox() {
+    return undefined;
+  }
+
+  constructor(args = {}) {
+    super({ ...args, readOnly: true });
+  }
+}
+
 /**
  * Flip the block-toolbar popovers upward when they would open off the bottom
  * of the viewport, and open the block-settings popover under the gear button
@@ -125,7 +139,7 @@ export function attachPageSingletons() {
  * the names the server-side renderers and `tools.include`/`exclude` use).
  *
  * @param {object} context { instanceId, tenantPath, typeName, partName,
- *                         fieldName, pickMedia, mediaModalHost }
+ *                         fieldName, pickMedia, mediaModalHost, allowRawBlocks }
  */
 export function buildBaseTools(context) {
   const { tenantPath } = context;
@@ -215,7 +229,7 @@ export function buildBaseTools(context) {
       class: Quote,
       inlineToolbar: true,
     },
-    raw: Raw,
+    raw: context.allowRawBlocks === false ? LockedRaw : Raw,
     table: {
       class: Table,
       inlineToolbar: true,
@@ -394,6 +408,9 @@ function normaliseOptions(options) {
       fieldName: context.fieldName || '',
       pickMedia: options.pickMedia,
       mediaModalHost: options.mediaModalHost,
+      // Callers that pass nothing get the full raw tool: the server still
+      // enforces the permission.
+      allowRawBlocks: options.allowRawBlocks !== false,
     },
   };
 }
@@ -481,6 +498,8 @@ function createHandle(editor, instanceId, pageUndo, emitter) {
  * @param {Function} [options.pickMedia]     (select: (paths: string[]) => void) => void; replaces
  *                                           the image tool's Bootstrap media modal.
  * @param {string} [options.mediaModalHost]  Id of the media modal (default `<holder id>-ModalBody`).
+ * @param {boolean} [options.allowRawBlocks] false: the raw HTML tool is locked (no toolbox entry,
+ *                                           existing raw blocks read-only). Default true.
  * @param {object} [options.context]         For initializeEditorJS: { typeName, partName, fieldName,
  *                                           hiddenFieldId } (link search scope and registry entry).
  * @param {number} [options.debounceMs]      For initializeEditorJS: 0 writes the field per change.

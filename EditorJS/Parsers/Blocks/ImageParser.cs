@@ -13,15 +13,42 @@ namespace Etch.OrchardCore.Blocks.EditorJS.Parsers.Blocks
                 new ImageBlockViewModel
                 {
                     Alignment = block.Get("alignment", "center"),
+                    Alt = GetAlt(block),
                     Caption = block.Get("caption"),
                     MediaPath = GetMediaPath(block),
                     Profile = GetProfile(block),
                     Stretched = block.Get("stretched", false),
                     Url = GetMediaUrl(context, block),
-                    LinkUrl = block.Get("linkUrl"),
+                    // Views write it into an href: only a safe link (http, https, mailto, tel or relative).
+                    LinkUrl = BlockLinkUrl.SafeLinkUrl(block.Get("linkUrl")),
                     LinkNewTab = block.Get("linkNewTab", false),
                 }
             );
+        }
+
+        /// <summary>
+        /// The image's alt text, trimmed: plain text the editor saves under <c>alt</c>,
+        /// and the views write into the alt attribute encoded. Empty when the block has
+        /// none -- every block saved before the editor had the field, an explicit null,
+        /// whitespace, or a value that is not text (an object or a number is not alt
+        /// text, and Block.Get would hand over its JSON) -- so the views fall back to the
+        /// caption's text, then to alt="".
+        /// </summary>
+        public static string GetAlt(Block block)
+        {
+            if (block?.Data == null || !block.Data.TryGetValue("alt", out var value))
+            {
+                return string.Empty;
+            }
+
+            var text = value switch
+            {
+                string s => s,
+                JValue { Type: JTokenType.String } token => (string)token,
+                _ => null,
+            };
+
+            return string.IsNullOrWhiteSpace(text) ? string.Empty : text.Trim();
         }
 
         /// <summary>

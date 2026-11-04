@@ -131,3 +131,48 @@
     color: #707684;
     cursor: pointer;
 }
+
+/* Alt text field, first in the block settings popover. Reuses the link
+   section's label and input styles. */
+.media-library-alt-settings {
+    padding: 6px 10px;
+    border-bottom: 1px solid #e8e8eb;
+}
+
+.media-library-alt-settings__help {
+    margin-top: 4px;
+    font-size: 11px;
+    line-height: 1.35;
+    color: #707684;
+}
+
+/* "No alt text" prompt under an image with neither alt text nor caption: a
+   quiet nudge that opens the settings on the alt field, never a save blocker. */
+.media-library-item__alt-hint {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 4px;
+    padding: 2px 8px;
+    border: 1px dashed #d9a400;
+    border-radius: 10px;
+    background: #fff8e1;
+    color: #7a5a00;
+    font-size: 12px;
+    line-height: 1.4;
+    cursor: pointer;
+}
+
+.media-library-item__alt-hint::before {
+    content: '!';
+    font-weight: 700;
+}
+
+.media-library-item__alt-hint:hover,
+.media-library-item__alt-hint:focus-visible {
+    border-style: solid;
+}
+
+.media-library-item__alt-hint[hidden] {
+    display: none;
+}

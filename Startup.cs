@@ -17,6 +17,7 @@ using OrchardCore.ContentTypes.Editors;
 using OrchardCore.Data.Migration;
 using OrchardCore.Liquid;
 using OrchardCore.Modules;
+using OrchardCore.Security.Permissions;
 using System;
 
 namespace Etch.OrchardCore.Blocks
@@ -46,6 +47,10 @@ namespace Etch.OrchardCore.Blocks
             services.AddScoped<IContentTypePartDefinitionDisplayDriver, BlockBodyPartSettingsDriver>();
 
             services.AddScoped<IContentSearchResultsProvider, DefaultContentSearchResultsProvider>();
+
+            services.AddPermissionProvider<Permissions>();
+            services.AddScoped<RawBlockEditGuard>();
+            services.AddScoped<BlockEditGuard>();
 
             services.AddScoped<IDataMigration, Migrations>();
 

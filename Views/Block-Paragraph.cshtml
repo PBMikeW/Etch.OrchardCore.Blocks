@@ -1,4 +1,5 @@
 ﻿@{
     string textAlignment = Model.TextAlignment;
 }
-<p@(textAlignment != null ? Html.Raw($" style=\"text-align:{textAlignment}\"") : null)>@Html.Raw(Model.Text)</p>
+@* Encoded attribute (dropped when null); BlocksParser only passes a known alignment on. *@
+<p style="@(textAlignment != null ? "text-align:" + textAlignment : null)">@Html.Raw(Model.Text)</p>

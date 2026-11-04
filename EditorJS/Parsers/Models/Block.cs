@@ -6,6 +6,9 @@ namespace Etch.OrchardCore.Blocks.EditorJS.Parsers.Models
 {
     public class Block
     {
+        [JsonProperty("id")]
+        public string Id { get; set; }
+
         [JsonProperty("type")]
         public string Type { get; set; }
 

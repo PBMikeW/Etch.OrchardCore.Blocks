@@ -28,10 +28,16 @@
             bool selfPadded = block.SelfPadded == true;
             string paddingStyle = selfPadded ? null : PaddingStyle(block);
             string anchor = selfPadded ? null : block.Anchor as string;
+            if (string.IsNullOrEmpty(anchor))
+            {
+                anchor = null;
+            }
 
             if (!string.IsNullOrEmpty(anchor) || paddingStyle != null)
             {
-                <div@(!string.IsNullOrEmpty(anchor) ? Html.Raw($" id=\"{anchor}\"") : null)@(paddingStyle != null ? Html.Raw($" style=\"{paddingStyle}\"") : null)>
+                @* Encoded attributes (Razor drops a null one): BlocksParser only passes a slug
+                   anchor on, and this keeps a quote in either value from leaving its attribute. *@
+                <div id="@anchor" style="@paddingStyle">
                     @await DisplayAsync(block)
                 </div>
             }

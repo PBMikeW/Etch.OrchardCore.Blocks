@@ -10,22 +10,34 @@
     tag.AddCssClass($"align--{alignment}");
     tag.AddCssClass("figure");
 
-    if (Model.HasImageAnchor)
+    if (Model.HasImageAnchor == true)
     {
         tag.Attributes["id"] = Model.ImageAnchor;
     }
+
+    // Alt text: the editor's own alt field, else the caption's text (the caption is
+    // editor HTML, so tags go), else alt="" - a decorative image. The attribute is
+    // always written, and Razor attribute-encodes it.
+    string altText = (string)Model.Alt;
+    if (string.IsNullOrWhiteSpace(altText))
+    {
+        altText = Model.HasCaption
+            ? System.Net.WebUtility.HtmlDecode(System.Text.RegularExpressions.Regex.Replace((string)Model.Caption, "<[^>]*>", string.Empty))
+            : string.Empty;
+    }
+    altText = altText.Trim();
 }
 
 @tag.RenderStartTag()
     @if (Model.HasLink)
     {
         <a href="@Model.LinkUrl"@(Model.LinkNewTab ? Html.Raw(" target=\"_blank\" rel=\"noopener\"") : null)>
-            <img src="@Model.Url" alt="@Model.Caption" />
+            <img src="@Model.Url" alt="@altText" />
         </a>
     }
     else
     {
-        <img src="@Model.Url" alt="@Model.Caption" />
+        <img src="@Model.Url" alt="@altText" />
     }
 
     @if (Model.HasCaption)

@@ -29,8 +29,12 @@ window.initializeEditorJS = (
   typeName,
   partName,
   fieldName,
-  placeholder
+  placeholder,
+  options = {}
 ) => {
+  // Older callers pass no options: the server still enforces the permission.
+  const allowRawBlocks = options.allowRawBlocks !== false;
+
   const $hiddenField = document.getElementById(hiddenFieldId);
 
   if (!$hiddenField) {
@@ -69,6 +73,9 @@ window.initializeEditorJS = (
     tenantPath,
     placeholder,
     undo: 'page',
+    // Without the ManageRawBlocks permission the raw HTML tool is locked
+    // (see LockedRaw in ./factory).
+    allowRawBlocks,
     // The field is what the form posts, so it is written on every change
     // rather than after a quiet period.
     debounceMs: 0,

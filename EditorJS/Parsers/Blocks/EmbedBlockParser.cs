@@ -1,5 +1,6 @@
 ﻿using System.Threading.Tasks;
 using Etch.OrchardCore.Blocks.EditorJS.Parsers.Models;
+using Etch.OrchardCore.Blocks.Services;
 using Etch.OrchardCore.Blocks.ViewModels.Blocks;
 
 namespace Etch.OrchardCore.Blocks.EditorJS.Parsers.Blocks
@@ -13,7 +14,8 @@ namespace Etch.OrchardCore.Blocks.EditorJS.Parsers.Blocks
                 {
                     Caption = block.Get("caption"),
                     Service = block.Get("service"),
-                    SourceUrl = block.Get("embed")
+                    // The view writes it into an iframe's src: only an https URL.
+                    SourceUrl = EmbedSources.SafeSourceUrl(block.Get("embed"))
                 }
             );
         }
