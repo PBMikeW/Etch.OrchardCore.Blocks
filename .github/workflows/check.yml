@@ -1,0 +1,20 @@
+name: Check
+
+# The blocks editor factory's checks (scripts/factory.check.mjs): the one check this fork has, so a pull request
+# shows a green tick before it is merged.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run check
