@@ -11,7 +11,8 @@
         "build:dev": "npm run generate-icons && webpack --mode development",
         "build:prod": "npm run generate-icons && webpack --mode production",
         "develop": "npm run generate-icons && webpack --watch",
-        "start": "npm install && npm run develop"
+        "start": "npm install && npm run develop",
+        "check": "node scripts/factory.check.mjs"
     },
     "repository": {
         "type": "git",

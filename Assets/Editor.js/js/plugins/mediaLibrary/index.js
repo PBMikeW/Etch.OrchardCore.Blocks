@@ -12,6 +12,29 @@ const selectors = {
   modalBody: '.modal-body',
 };
 
+/**
+ * One pick from a caller-supplied picker (the block-editor factory's
+ * `pickMedia` option) as the { mediaPath, url } a media-library selection
+ * gives. A plain string is a media-library path; its URL is the tenant's
+ * media route, which is what OrchardCore's media app hands back for the same
+ * asset. An object that already carries both is used as it is.
+ */
+function toPickedMedia(item, tenantPath) {
+  if (item && typeof item === 'object' && item.mediaPath) {
+    return { mediaPath: item.mediaPath, url: item.url || mediaUrl(item.mediaPath, tenantPath) };
+  }
+  if (typeof item !== 'string' || !item.trim()) {
+    return null;
+  }
+  const mediaPath = item.trim().replace(/^\/+/, '');
+  return { mediaPath, url: mediaUrl(mediaPath, tenantPath) };
+}
+
+function mediaUrl(mediaPath, tenantPath) {
+  const encoded = mediaPath.split('/').map((segment) => encodeURIComponent(segment)).join('/');
+  return `${tenantPath || ''}/media/${encoded}`;
+}
+
 export default class MediaLibraryTool {
   static get pasteConfig() {
     return {
@@ -76,8 +99,10 @@ export default class MediaLibraryTool {
             this.data.url = this._previewUrl(this.data.baseUrl, savedProfile);
         }
 
+    // The Bootstrap modal the media app is moved into: named by the factory's
+    // `mediaModalHost`, or the `<id>-ModalBody` the Blocks edit views render.
     this.modalBodyElement = document.getElementById(
-      `${config.id}-ModalBody`
+      this.config.mediaModalHost || `${this.config.id}-ModalBody`
     );
 
     // Natural size of the original asset, used by the profile picker to take
@@ -409,6 +434,11 @@ export default class MediaLibraryTool {
      * Opens the Orchard Core media library.
      */
     _openMediaLibrary() {
+        if (typeof this.config.pickMedia === 'function') {
+            this._pickFromCallback();
+            return;
+        }
+
         const self = this;
 
         $(selectors.mediaApp)
@@ -433,6 +463,23 @@ export default class MediaLibraryTool {
                 modal.hide();
                 return true;
             });
+    }
+
+    /**
+     * Hands the pick to the caller's own picker instead of moving the
+     * page's #mediaApp into this editor's modal, so a page that owns the media
+     * app (the course studio) stays its only owner. The picker calls `select`
+     * with media-library paths; the first one becomes this block's image.
+     */
+    _pickFromCallback() {
+        this.config.pickMedia((paths) => {
+            const first = Array.isArray(paths) ? paths[0] : paths;
+            const media = toPickedMedia(first, this.config.tenantPath);
+
+            if (media) {
+                this._setMedia(media);
+            }
+        });
     }
 
     /**

@@ -1,58 +1,27 @@
 import '../css/index.scss';
-import Delimiter from '@editorjs/delimiter';
-import Embed from '@editorjs/embed';
-import Header from '@editorjs/header';
-import List from '@editorjs/list';
-import Paragraph from '@editorjs/paragraph';
-import Raw from '@editorjs/raw';
-import Quote from '@editorjs/quote';
-import Table from '@editorjs/table';
-import EditorJS from '@editorjs/editorjs';
-import AnchorTune from './plugins/anchorTuneWrapper';
-import AlignmentTune from './plugins/alignmentTune';
-import PaddingTune from './plugins/paddingTune';
-import TextColor from 'editorjs-text-color-plugin';
-
-import LinkTool from './plugins/link';
-import FontSizeTool from './plugins/fontSize';
-import RemoveFormat from './plugins/removeFormat';
-import MediaLibrary from './plugins/mediaLibrary';
-import IconBlock from './plugins/iconBlock';
-import KbButton from './plugins/kbButton';
-import Breadcrumb from './plugins/breadcrumb';
-import { attachFormatPainter } from './plugins/formatPainter';
-import TextPresetTune, { attachTextPresets } from './plugins/textPreset';
-import { attachUndo, recordChange } from './plugins/crossWidgetUndo';
-import { attachPopoverFlip } from './plugins/popoverFlip';
-import { attachPopoverAnchor } from './plugins/popoverAnchor';
+import { attachPageSingletons, createBlockEditor } from './factory';
 import { upgradeLegacyBlocks } from './plugins/utils/legacyMarkup';
-import withScopedActiveState from './plugins/utils/colorActiveState';
-import withScopedSurround from './plugins/utils/colorSurroundScope';
 
 // Flip the block-toolbar popovers upward when they would open off the bottom
-// of the viewport. Page-wide and idempotent, so it is registered once here
-// rather than per editor instance.
-attachPopoverFlip();
+// of the viewport, and open the block-settings popover under the gear button
+// when it is clicked (or beside the block text for Ctrl/Cmd + "/", which has
+// no button to hang under). Page-wide and idempotent, so they are registered
+// once here as the bundle loads; every editor the factory makes asks again,
+// which is a no-op.
+attachPageSingletons();
 
-// Open the block-settings popover under the gear button when it is clicked,
-// and beside the block text when it is opened with Ctrl/Cmd + "/" (which has
-// no button to hang under). Page-wide and idempotent for the same reason.
-attachPopoverAnchor();
+// The factory for pages that own their editor state (the course studio):
+// window.EtchBlocks.create(holder, options) -> Promise<handle>. See ./factory.
+window.EtchBlocks = { create: createBlockEditor };
 
-// The raw HTML tool for someone without the "Add or edit raw HTML blocks" permission
-// (ManageRawBlocks): left out of the toolbox, and raw blocks the content already has are
-// shown read-only, so they are kept exactly as they are (or can be deleted). Cosmetic only:
-// the server refuses a save that adds a raw block or changes one's HTML without the permission.
-class LockedRaw extends Raw {
-    static get toolbox() {
-        return undefined;
-    }
-
-    constructor(args = {}) {
-        super({ ...args, readOnly: true });
-    }
-}
-
+/**
+ * The OrchardCore Blocks part/field editor: one editor bound to the hidden
+ * input the form posts. A thin wrapper over the factory that keeps what the
+ * edit views and other admin scripts rely on: the hidden input is written and
+ * `contentpreview:render` fired on every change (and after an undo), the
+ * editor joins the page-wide undo timeline, `window.__editorJSInstances[id]`
+ * is `{ editor, hiddenFieldId }`, and the form's submit saves the editor.
+ */
 window.initializeEditorJS = (
   tenantPath,
   id,
@@ -71,233 +40,77 @@ window.initializeEditorJS = (
   if (!$hiddenField) {
     return;
   }
-  
+
   // No form on read-only pages (e.g. audit trail version preview) — still
   // initialise the editor so the content is visible; just skip submit wiring.
   const $form = $hiddenField.closest('form');
 
-    // Editor.js sometimes constructs inline tools without the registered config
-    // (seen opening the toolbox on @editorjs/editorjs 2.31.3: "Cannot read
-    // properties of undefined (reading 'colorCollections')"). Wrap the plugin so
-    // the constructor always receives its config, whatever the editor version does.
-    const withDefaultConfig = (ToolClass, defaults) =>
-        class extends ToolClass {
-            constructor(args = {}) {
-                super({ ...args, config: args.config ?? defaults });
-            }
-        };
+  const initialData = !$hiddenField.value ? {} : JSON.parse($hiddenField.value);
 
-    const colorToolConfig = {
-        colorCollections: ['#F8F8F8', '#D1D1D1', '#72808A', '#FFCD00', '#EF4123', '#002D6A', '#FFF', '#000', '#99ABC3'],
-        defaultColor: '#002D6A',
-        type: 'text',
-        customPicker: true,
+  // Content saved by earlier editor versions carries <font color> attributes
+  // and editor-fs-* size classes that the current colour and size tools do
+  // not recognise (and the admin has no CSS for the classes, so those sizes
+  // are invisible here). Rewrite them to the current markup before the
+  // editor renders and write the result straight back to the field, so a
+  // cloned widget or any page that is saved carries the upgraded content.
+  // Sizes resolve exactly as the site CSS rendered them, so nothing moves.
+  if (upgradeLegacyBlocks(initialData).changed) {
+    $hiddenField.value = JSON.stringify(initialData);
+  }
+
+  // The form posts this field, so every path that changes the content has to
+  // write it: the editor's own onChange, and an undo (which fires none).
+  const saveToField = (outputData) => {
+    $hiddenField.value = JSON.stringify(outputData);
+    document.dispatchEvent(new Event('contentpreview:render'));
+  };
+
+  // The editor is created, and registered in window.__editorJSInstances,
+  // synchronously inside this call; the promise settles once it is ready.
+  const created = createBlockEditor(document.getElementById(id), {
+    data: initialData,
+    onChange: saveToField,
+    tenantPath,
+    placeholder,
+    undo: 'page',
+    // Without the ManageRawBlocks permission the raw HTML tool is locked
+    // (see LockedRaw in ./factory).
+    allowRawBlocks,
+    // The field is what the form posts, so it is written on every change
+    // rather than after a quiet period.
+    debounceMs: 0,
+    context: {
+      typeName,
+      partName,
+      fieldName,
+      hiddenFieldId,
+    },
+  });
+
+  created.catch((error) => {
+    console.error(`Blocks editor #${id} failed to start`, error);
+  });
+
+  if ($form) {
+    const submitForm = () => {
+      $form.removeEventListener('submit', onSubmit);
+      $form.submit();
     };
 
-    const markerToolConfig = {
-        defaultColor: '#FFBF00',
-        type: 'marker',
-        icon: `<svg fill="#000000" height="200px" width="200px" version="1.1" id="Icons" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 32 32" xml:space="preserve"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <g> <path d="M17.6,6L6.9,16.7c-0.2,0.2-0.3,0.4-0.3,0.6L6,23.9c0,0.3,0.1,0.6,0.3,0.8C6.5,24.9,6.7,25,7,25c0,0,0.1,0,0.1,0l6.6-0.6 c0.2,0,0.5-0.1,0.6-0.3L25,13.4L17.6,6z"></path> <path d="M26.4,12l1.4-1.4c1.2-1.2,1.1-3.1-0.1-4.3l-3-3c-0.6-0.6-1.3-0.9-2.2-0.9c-0.8,0-1.6,0.3-2.2,0.9L19,4.6L26.4,12z"></path> </g> <g> <path d="M28,29H4c-0.6,0-1-0.4-1-1s0.4-1,1-1h24c0.6,0,1,0.4,1,1S28.6,29,28,29z"></path> </g> </g></svg>`,
+    // A failed save still submits: the field holds the last change written.
+    const onSubmit = () => {
+      created
+        .then((handle) => handle.save())
+        .then((outputData) => {
+          $hiddenField.value = JSON.stringify(outputData);
+          submitForm();
+        })
+        .catch((error) => {
+          console.error('Blocks editor save failed', error);
+          submitForm();
+        });
     };
 
-    const baseTools = {
-        alignmentTune: AlignmentTune,
-        anchorTune: {
-            class: AnchorTune,
-        },
-        paddingTune: PaddingTune,
-        textPreset: TextPresetTune,
-        breadcrumb: Breadcrumb,
-        Color: {
-            // Disable the A-button apply. editorjs routes an A-button click through
-            // surround() -> the plugin's wrap(), which does extractContents() +
-            // removeAllRanges() WITHOUT restoring the range, dropping the caret to
-            // the start of the block. Colour is applied via the swatch palette
-            // instead (its updateWrapper path re-adds the range and preserves the
-            // selection). No-op surround leaves the palette open on A-click but
-            // stops the caret jump. (Marker has no palette, so it keeps surround.)
-            //
-            // withScopedActiveState: the plugin lights its button from any
-            // ancestor <span>, so the font-size tool's <span class="fontsize-tool">
-            // lit the highlighter. See ./plugins/utils/colorActiveState.
-            //
-            // withScopedSurround: and it *unwraps* any ancestor <span> before
-            // applying, which threw that font size away. Dead code here while
-            // surround() is a no-op, applied for the same reason the marker
-            // needs it. See ./plugins/utils/colorSurroundScope.
-            class: class extends withScopedSurround(withScopedActiveState(withDefaultConfig(TextColor, colorToolConfig))) {
-                surround() {}
-            },
-            config: colorToolConfig,
-        },
-        Marker: {
-            class: withScopedSurround(withScopedActiveState(withDefaultConfig(TextColor, markerToolConfig))),
-            config: markerToolConfig,
-        },
-        delimiter: Delimiter,
-        embed: {
-            class: Embed,
-            config: {
-                services: {
-                    'twitch-channel': true,
-                    'twitch-video': true,
-                    vimeo: true,
-                    youtube: true,
-                },
-            },
-            inlineToolbar: true,
-        },
-        fontSize: FontSizeTool,
-        // Last of the inline tools registered here, so its button renders at
-        // the end of the inline toolbar (toolbar order is registration order).
-        removeFormat: RemoveFormat,
-        header: {
-            class: Header,
-            inlineToolbar: true,
-        },
-        icon: {
-            class: IconBlock,
-            config: {
-                tenantPath,
-            },
-            // The icon block lays its icon out with justify-content and offers
-            // its own left/centre/right in the block settings, which is what
-            // Block-Icon.cshtml renders. The editor-wide alignment tune writes
-            // text-align instead, so its four buttons sat above the real ones
-            // doing nothing. A tool's own `tunes` list replaces the editor-wide
-            // one (Editor.js reads it as the tool's enabledBlockTunes), so this
-            // is the global list from below minus that tune.
-            tunes: ['textPreset', 'anchorTune', 'paddingTune'],
-        },
-        image: {
-            class: MediaLibrary,
-            config: {
-                id,
-            },
-        },
-        kbButton: {
-            class: KbButton,
-            config: {
-                // The icon picker previews icons from the sprite at
-                // <tenantPath>/Etch.OrchardCore.Blocks/assets/heroicons.svg,
-                // the same way the link tool builds its search URL.
-                tenantPath,
-            },
-        },
-        link: {
-            class: LinkTool,
-            config: {
-                fieldName,
-                partName,
-                typeName,
-                tenantPath,
-            },
-        },
-        list: {
-            class: List,
-            inlineToolbar: true,
-        },
-        paragraph: {
-            class: Paragraph,
-            inlineToolbar: true,
-            config: {
-                preserveBlank: true,
-            },
-        },
-        // With the inline toolbar the quote tool merges the inline tools'
-        // sanitiser rules, so bold, links and colour survive save inside a
-        // quote (without it every inline tag was stripped on save, which made
-        // text presets a silent no-op on quotes).
-        quote: {
-            class: Quote,
-            inlineToolbar: true,
-        },
-        raw: allowRawBlocks ? Raw : LockedRaw,
-        table: {
-            class: Table,
-            inlineToolbar: true,
-            config: {
-                rows: 2,
-                cols: 3,
-            },
-        },
-    };
-
-    const initialData = !$hiddenField.value ? {} : JSON.parse($hiddenField.value);
-
-    // Content saved by earlier editor versions carries <font color> attributes
-    // and editor-fs-* size classes that the current colour and size tools do
-    // not recognise (and the admin has no CSS for the classes, so those sizes
-    // are invisible here). Rewrite them to the current markup before the
-    // editor renders and write the result straight back to the field, so a
-    // cloned widget or any page that is saved carries the upgraded content.
-    // Sizes resolve exactly as the site CSS rendered them, so nothing moves.
-    if (upgradeLegacyBlocks(initialData).changed) {
-        $hiddenField.value = JSON.stringify(initialData);
-    }
-
-    // The form posts this field, so every path that changes the content has to
-    // write it: the editor's own onChange, and an undo (which fires none).
-    const saveToField = (outputData) => {
-        $hiddenField.value = JSON.stringify(outputData);
-        document.dispatchEvent(new Event('contentpreview:render'));
-    };
-
-    const editor = new EditorJS({
-        holder: id,
-
-        placeholder: placeholder || 'Enter your content here...',
-
-        tools: baseTools,
-
-        // textPreset first: "Style" is the most-used row of the settings
-        // popover, and the popover is already tall enough that anything below
-        // the padding inputs needs scrolling to reach.
-        tunes: ['textPreset', 'alignmentTune', 'anchorTune', 'paddingTune'],
-
-        data: initialData,
-
-        onChange: (api, events) => {
-            editor
-                .save()
-                .then((outputData) => {
-                    saveToField(outputData);
-                    // Undo records from this same save: one save per change.
-                    recordChange(editor, outputData, events);
-                })
-                .catch((error) => {});
-        },
-    });
-
-    // Expose editor instance so external code (e.g. block drag-and-drop) can
-    // use the Blocks API (insert, delete, move, update).
-    if (!window.__editorJSInstances) window.__editorJSInstances = {};
-    window.__editorJSInstances[id] = { editor, hiddenFieldId };
-
-    // Format painter: copy a block's type/heading-level and paint it onto others.
-    // Text presets: apply a named style to this block or the whole selection.
-    // Cross-widget undo: a single Ctrl+Z/Y timeline across all editor instances.
-    editor.isReady.then(() => {
-        const holderEl = document.getElementById(id);
-        attachFormatPainter(editor, holderEl);
-        attachTextPresets(editor, holderEl);
-        // An undo re-renders the blocks, and EditorJS fires no onChange for
-        // its own render, so it hands us the post-render data to store.
-        attachUndo(editor, holderEl, saveToField);
-    });
-
-    if ($form) {
-        const onSubmit = (e) => {
-            editor
-                .save()
-                .then((outputData) => {
-                    $hiddenField.value = JSON.stringify(outputData);
-                    $form.removeEventListener('submit', onSubmit);
-                    $form.submit();
-                })
-                .catch((error) => {});
-        };
-
-        $form.addEventListener('submit', onSubmit);
-    }
+    $form.addEventListener('submit', onSubmit);
+  }
 };

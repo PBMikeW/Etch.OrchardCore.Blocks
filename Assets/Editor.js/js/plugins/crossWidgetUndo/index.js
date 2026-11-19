@@ -689,6 +689,26 @@ function undoLetter(e) {
   return code === 'KeyY' ? 'y' : '';
 }
 
+/**
+ * True inside an EditorJS editor that never attached to this timeline: one
+ * made by the block-editor factory with `undo: "off"` (the course studio).
+ * Its blocks keep the browser's own contenteditable undo, even on a page that
+ * also has editors on the page-wide timeline.
+ */
+function inUnmanagedEditor(node) {
+  if (!node || node.nodeType !== 1 || !node.closest) {
+    return false;
+  }
+  return !!node.closest('.codex-editor') && !inManagedEditor(node);
+}
+
+// Keys this module leaves to the browser: the editor's chrome fields and
+// editors that are not on the timeline.
+function handsKeyToBrowser(e) {
+  const nodes = [e.target, document.activeElement];
+  return nodes.some((node) => isChromeField(node) || inUnmanagedEditor(node));
+}
+
 function onGlobalKeyDown(e) {
   // Alt is somebody else's shortcut: Ctrl+Alt+Z is not undo, and on Windows
   // AltGr arrives as Ctrl+Alt, where the key is producing a character.
@@ -702,7 +722,8 @@ function onGlobalKeyDown(e) {
   const action = letter === 'y' || e.shiftKey ? 'redo' : 'undo';
   // The editor's own fields (toolbox search, link URL, tune inputs) keep the
   // browser's undo: they are not block content and have their own history.
-  if (isChromeField(e.target) || isChromeField(document.activeElement)) {
+  // So do editors that opted out of this timeline (see handsKeyToBrowser).
+  if (handsKeyToBrowser(e)) {
     return;
   }
   // Claim the shortcut inside an editor we manage — and also when the focus is
@@ -819,4 +840,21 @@ export async function attachUndo(editor, holderEl, onApplied) {
     baselineAnnounced = true;
     scheduleStateEvent();
   }
+}
+
+/**
+ * Take one editor off the timeline: its snapshots go, and so do its entries in
+ * the page-wide history, so Ctrl+Z can no longer try to render into it. For an
+ * editor that is being destroyed (the block-editor factory's destroy()). The
+ * page-level listeners stay, since other editors may still be attached.
+ *
+ * @param {object} editor EditorJS instance passed to attachUndo.
+ */
+export function detachUndo(editor) {
+  const instance = instanceFor(editor);
+  if (!instance) {
+    return;
+  }
+  dropInstance(instance);
+  scheduleStateEvent();
 }
